@@ -302,7 +302,7 @@
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <CLToolExe>clang-cl.exe</CLToolExe>
       <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
-      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing -march=haswell -mtune=native  /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing -march=haswell -mtune=native /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>

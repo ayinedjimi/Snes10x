@@ -44,56 +44,61 @@ void S9xMainLoop (void)
 
 	for (;;)
 	{
-		if (S9X_UNLIKELY(CPU.NMIPending))
+		// Fast path: skip NMI/IRQ/timer checks when nothing is pending
+		// This avoids 3 unlikely branches per opcode in the common case
+		if (S9X_UNLIKELY(CPU.NMIPending | CPU.IRQLine | CPU.IRQExternal |
+		                 (CPU.Cycles >= Timings.NextIRQTimer)))
 		{
-			#ifdef DEBUGGER
-			if (Settings.TraceHCEvent)
-			    S9xTraceFormattedMessage ("Comparing %d to %d\n", Timings.NMITriggerPos, CPU.Cycles);
-			#endif
-			if (Timings.NMITriggerPos <= CPU.Cycles)
+			if (CPU.NMIPending)
 			{
-				CPU.NMIPending = FALSE;
-				Timings.NMITriggerPos = 0xffff;
+				#ifdef DEBUGGER
+				if (Settings.TraceHCEvent)
+				    S9xTraceFormattedMessage ("Comparing %d to %d\n", Timings.NMITriggerPos, CPU.Cycles);
+				#endif
+				if (Timings.NMITriggerPos <= CPU.Cycles)
+				{
+					CPU.NMIPending = FALSE;
+					Timings.NMITriggerPos = 0xffff;
+					if (CPU.WaitingForInterrupt)
+					{
+						CPU.WaitingForInterrupt = FALSE;
+						Registers.PCw++;
+						CPU.Cycles += TWO_CYCLES + ONE_DOT_CYCLE / 2;
+						while (CPU.Cycles >= CPU.NextEvent)
+							S9xDoHEventProcessing();
+					}
+
+					CHECK_FOR_IRQ_CHANGE();
+					S9xOpcode_NMI();
+				}
+			}
+
+			if (CPU.Cycles >= Timings.NextIRQTimer)
+			{
+				#ifdef DEBUGGER
+				S9xTraceMessage ("Timer triggered\n");
+				#endif
+
+				S9xUpdateIRQPositions(false);
+				CPU.IRQLine = TRUE;
+			}
+
+			if (CPU.IRQLine || CPU.IRQExternal)
+			{
 				if (CPU.WaitingForInterrupt)
 				{
 					CPU.WaitingForInterrupt = FALSE;
 					Registers.PCw++;
 					CPU.Cycles += TWO_CYCLES + ONE_DOT_CYCLE / 2;
-					while (S9X_UNLIKELY(CPU.Cycles >= CPU.NextEvent))
+					while (CPU.Cycles >= CPU.NextEvent)
 						S9xDoHEventProcessing();
 				}
 
-				CHECK_FOR_IRQ_CHANGE();
-				S9xOpcode_NMI();
-			}
-		}
-
-		if (S9X_UNLIKELY(CPU.Cycles >= Timings.NextIRQTimer))
-		{
-			#ifdef DEBUGGER
-			S9xTraceMessage ("Timer triggered\n");
-			#endif
-
-			S9xUpdateIRQPositions(false);
-			CPU.IRQLine = TRUE;
-		}
-
-		if (S9X_UNLIKELY(CPU.IRQLine || CPU.IRQExternal))
-		{
-			if (CPU.WaitingForInterrupt)
-			{
-				CPU.WaitingForInterrupt = FALSE;
-				Registers.PCw++;
-				CPU.Cycles += TWO_CYCLES + ONE_DOT_CYCLE / 2;
-				while (S9X_UNLIKELY(CPU.Cycles >= CPU.NextEvent))
-					S9xDoHEventProcessing();
-			}
-
-			if (!CheckFlag(IRQ))
-			{
-				/* The flag pushed onto the stack is the new value */
-				CHECK_FOR_IRQ_CHANGE();
-				S9xOpcode_IRQ();
+				if (!CheckFlag(IRQ))
+				{
+					CHECK_FOR_IRQ_CHANGE();
+					S9xOpcode_IRQ();
+				}
 			}
 		}
 

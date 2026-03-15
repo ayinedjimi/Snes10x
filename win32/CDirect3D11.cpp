@@ -762,6 +762,9 @@ void CDirect3D11::RenderFrame()
 
             const __m256i mask5  = _mm256_set1_epi32(0x1F);
             const __m256i alpha  = _mm256_set1_epi32(0xFF000000u);
+            // Use non-temporal stores to avoid polluting L1/L2 cache
+            // (framebuffer data is write-only, won't be read back by CPU)
+            bool aligned32 = ((uintptr_t)(dst32) & 31) == 0;
             for (; col + 8 <= width; col += 8)
             {
                 __m128i src = _mm_loadu_si128((const __m128i*)(src16 + col));
@@ -775,8 +778,13 @@ void CDirect3D11::RenderFrame()
                 __m256i result = _mm256_or_si256(alpha,
                     _mm256_or_si256(_mm256_slli_epi32(r8, 16),
                         _mm256_or_si256(_mm256_slli_epi32(g8, 8), b8)));
-                _mm256_storeu_si256((__m256i*)(dst32 + col), result);
+                if (aligned32)
+                    _mm256_stream_si256((__m256i*)(dst32 + col), result);
+                else
+                    _mm256_storeu_si256((__m256i*)(dst32 + col), result);
             }
+            // Fence after non-temporal stores
+            if (aligned32) _mm_sfence();
             for (; col < width; col++)
             {
                 uint16_t px = src16[col];
