@@ -11,13 +11,14 @@
 #include <cassert>
 #include <cstdint>
 #include <cmath>
+#include <atomic>
 
 class Resampler
 {
   public:
-    volatile int end;
+    std::atomic<int> end;
     int buffer_size;
-    volatile int start;
+    std::atomic<int> start;
     int16_t *buffer;
 
     float r_step;
@@ -82,8 +83,8 @@ class Resampler
         if (!buffer)
             return;
 
-        start = 0;
-        end = 0;
+        start.store(0, std::memory_order_relaxed);
+        end.store(0, std::memory_order_relaxed);
         memset(buffer, 0, buffer_size * 2);
 
         r_frac = 0.0;
@@ -94,7 +95,10 @@ class Resampler
     inline void dump(int num_samples)
     {
         if (num_samples > 0 && space_filled() >= num_samples)
-            start = (start + num_samples) % buffer_size;
+        {
+            int s = start.load(std::memory_order_relaxed);
+            start.store((s + num_samples) % buffer_size, std::memory_order_release);
+        }
     }
 
     inline void add_silence(int num_samples)
@@ -102,14 +106,15 @@ class Resampler
          if (num_samples > 0 && space_empty() < num_samples)
             return;
 
-        int first_block_size = min(num_samples, buffer_size - end);
+        int e = end.load(std::memory_order_relaxed);
+        int first_block_size = min(num_samples, buffer_size - e);
 
-        memset(buffer + end, 0, first_block_size * 2);
+        memset(buffer + e, 0, first_block_size * 2);
 
         if (num_samples > first_block_size)
             memset(buffer, 0, (num_samples - first_block_size) * 2);
 
-        end = (end + num_samples) % buffer_size;
+        end.store((e + num_samples) % buffer_size, std::memory_order_release);
 
         return;
     }
@@ -119,14 +124,15 @@ class Resampler
         if (space_filled() < num_samples)
             return false;
 
-        int first_block_size = buffer_size - start;
+        int s = start.load(std::memory_order_relaxed);
+        int first_block_size = buffer_size - s;
 
-        memcpy(dst, buffer + start, min(num_samples, first_block_size) * 2);
+        memcpy(dst, buffer + s, min(num_samples, first_block_size) * 2);
 
         if (num_samples > first_block_size)
             memcpy(dst + first_block_size, buffer, (num_samples - first_block_size) * 2);
 
-        start = (start + num_samples) % buffer_size;
+        start.store((s + num_samples) % buffer_size, std::memory_order_release);
 
         return true;
     }
@@ -135,9 +141,10 @@ class Resampler
     {
         if (space_empty() >= 2)
         {
-            buffer[end] = l;
-            buffer[end + 1] = r;
-            end = (end + 2) % buffer_size;
+            int e = end.load(std::memory_order_relaxed);
+            buffer[e] = l;
+            buffer[e + 1] = r;
+            end.store((e + 2) % buffer_size, std::memory_order_release);
         }
     }
 
@@ -146,14 +153,15 @@ class Resampler
         if (space_empty() < num_samples)
             return false;
 
-        int first_block_size = min(num_samples, buffer_size - end);
+        int e = end.load(std::memory_order_relaxed);
+        int first_block_size = min(num_samples, buffer_size - e);
 
-        memcpy(buffer + end, src, first_block_size * 2);
+        memcpy(buffer + e, src, first_block_size * 2);
 
         if (num_samples > first_block_size)
             memcpy(buffer, src + first_block_size, (num_samples - first_block_size) * 2);
 
-        end = (end + num_samples) % buffer_size;
+        end.store((e + num_samples) % buffer_size, std::memory_order_release);
 
         return true;
     }
@@ -169,11 +177,12 @@ class Resampler
 
         assert((num_samples & 1) == 0); // resampler always processes both stereo samples
         int o_position = 0;
+        int s = start.load(std::memory_order_acquire);
 
-        while (o_position < num_samples && space_filled() >= 2)
+        while (o_position < num_samples && _space_filled_raw(s) >= 2)
         {
-            int s_left = buffer[start];
-            int s_right = buffer[start + 1];
+            int s_left = buffer[s];
+            int s_right = buffer[s + 1];
             int hermite_val[2];
 
             while (r_frac <= 1.0 && o_position < num_samples)
@@ -202,11 +211,14 @@ class Resampler
 
                 r_frac -= 1.0;
 
-                start += 2;
-                if (start >= buffer_size)
-                    start -= buffer_size;
+                s += 2;
+                if (s >= buffer_size)
+                    s -= buffer_size;
             }
         }
+
+        // Single atomic store at the end — all reads committed
+        start.store(s, std::memory_order_release);
     }
 
     inline int space_empty(void) const
@@ -216,7 +228,7 @@ class Resampler
 
     inline int space_filled(void) const
     {
-        int size = end - start;
+        int size = end.load(std::memory_order_acquire) - start.load(std::memory_order_acquire);
         if (size < 0)
             size += buffer_size;
         return size;
@@ -240,8 +252,18 @@ class Resampler
         if (num_samples & 1)
             num_samples++;
         buffer_size = num_samples;
-        buffer = new int16_t[buffer_size];
+        buffer = new int16_t[buffer_size + 2];  // +2 padding for push_sample safety at boundary
         clear();
+    }
+
+  private:
+    // Internal helper: compute filled space from a local snapshot of start
+    inline int _space_filled_raw(int s) const
+    {
+        int size = end.load(std::memory_order_acquire) - s;
+        if (size < 0)
+            size += buffer_size;
+        return size;
     }
 };
 

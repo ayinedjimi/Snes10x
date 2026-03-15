@@ -75,6 +75,7 @@ struct CMemory
 	uint8	*WriteMap[MEMMAP_NUM_BLOCKS];
 	uint8	BlockIsRAM[MEMMAP_NUM_BLOCKS];
 	uint8	BlockIsROM[MEMMAP_NUM_BLOCKS];
+	int32	SpeedMap[MEMMAP_NUM_BLOCKS]; // Precomputed memory_speed() per 4KB block
 	uint8	ExtendedFormat;
 
 	std::string ROMFilename;

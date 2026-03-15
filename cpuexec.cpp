@@ -4,6 +4,7 @@
    For further information, consult the LICENSE file in the root directory.
 \*****************************************************************************/
 
+#include <immintrin.h>
 #include "snes9x.h"
 #include "memmap.h"
 #include "cpuops.h"
@@ -39,12 +40,11 @@ void S9xMainLoop (void)
 	if (CPU.Flags & SCAN_KEYS_FLAG)
 	{
 		CPU.Flags &= ~SCAN_KEYS_FLAG;
-		S9xMovieUpdate();
 	}
 
 	for (;;)
 	{
-		if (CPU.NMIPending)
+		if (S9X_UNLIKELY(CPU.NMIPending))
 		{
 			#ifdef DEBUGGER
 			if (Settings.TraceHCEvent)
@@ -59,7 +59,7 @@ void S9xMainLoop (void)
 					CPU.WaitingForInterrupt = FALSE;
 					Registers.PCw++;
 					CPU.Cycles += TWO_CYCLES + ONE_DOT_CYCLE / 2;
-					while (CPU.Cycles >= CPU.NextEvent)
+					while (S9X_UNLIKELY(CPU.Cycles >= CPU.NextEvent))
 						S9xDoHEventProcessing();
 				}
 
@@ -68,7 +68,7 @@ void S9xMainLoop (void)
 			}
 		}
 
-		if (CPU.Cycles >= Timings.NextIRQTimer)
+		if (S9X_UNLIKELY(CPU.Cycles >= Timings.NextIRQTimer))
 		{
 			#ifdef DEBUGGER
 			S9xTraceMessage ("Timer triggered\n");
@@ -78,14 +78,14 @@ void S9xMainLoop (void)
 			CPU.IRQLine = TRUE;
 		}
 
-		if (CPU.IRQLine || CPU.IRQExternal)
+		if (S9X_UNLIKELY(CPU.IRQLine || CPU.IRQExternal))
 		{
 			if (CPU.WaitingForInterrupt)
 			{
 				CPU.WaitingForInterrupt = FALSE;
 				Registers.PCw++;
 				CPU.Cycles += TWO_CYCLES + ONE_DOT_CYCLE / 2;
-				while (CPU.Cycles >= CPU.NextEvent)
+				while (S9X_UNLIKELY(CPU.Cycles >= CPU.NextEvent))
 					S9xDoHEventProcessing();
 			}
 
@@ -130,7 +130,7 @@ void S9xMainLoop (void)
 		}
 	#endif
 
-		if (CPU.Flags & SCAN_KEYS_FLAG)
+		if (S9X_UNLIKELY(CPU.Flags & SCAN_KEYS_FLAG))
 		{
 			break;
 		}
@@ -138,13 +138,15 @@ void S9xMainLoop (void)
 		uint8				Op;
 		struct	SOpcodes	*Opcodes;
 
-		if (CPU.PCBase)
+		if (S9X_LIKELY(CPU.PCBase != NULL))
 		{
 			Op = CPU.PCBase[Registers.PCw];
+			// Prefetch next cache line of opcodes (64 bytes ahead)
+			_mm_prefetch((const char*)(CPU.PCBase + Registers.PCw + 64), _MM_HINT_T0);
 			CPU.Cycles += CPU.MemSpeed;
 			Opcodes = ICPU.S9xOpcodes;
 
-			if (CPU.Cycles > 1000000)
+			if (S9X_UNLIKELY(CPU.Cycles > 1000000))
 			{
 				Settings.StopEmulation = true;
 				CPU.Flags |= HALTED_FLAG;
@@ -159,7 +161,7 @@ void S9xMainLoop (void)
 			Opcodes = S9xOpcodesSlow;
 		}
 
-		if ((Registers.PCw & MEMMAP_MASK) + ICPU.S9xOpLengths[Op] >= MEMMAP_BLOCK_SIZE)
+		if (S9X_UNLIKELY((Registers.PCw & MEMMAP_MASK) + ICPU.S9xOpLengths[Op] >= MEMMAP_BLOCK_SIZE))
 		{
 			uint8	*oldPCBase = CPU.PCBase;
 

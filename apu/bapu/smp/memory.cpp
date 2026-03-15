@@ -7,6 +7,10 @@ void SMP::port_write(unsigned addr, unsigned data) {
 }
 
 unsigned SMP::mmio_read(unsigned addr) {
+  // Fast path: port reads (0xf4-0xf7) are the most common MMIO reads
+  if(S9X_LIKELY((addr & 0xfc) == 0xf4))
+    return cpu.port_read(addr);
+
   switch(addr) {
 
   case 0xf2:
@@ -14,12 +18,6 @@ unsigned SMP::mmio_read(unsigned addr) {
 
   case 0xf3:
     return dsp.read(status.dsp_addr & 0x7f);
-
-  case 0xf4:
-  case 0xf5:
-  case 0xf6:
-  case 0xf7:
-    return cpu.port_read(addr);
 
   case 0xf8:
     return status.ram00f8;

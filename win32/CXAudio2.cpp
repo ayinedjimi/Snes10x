@@ -129,13 +129,11 @@ returns true if successful, false otherwise
 bool CXAudio2::InitVoices(void)
 {
 	HRESULT hr;
-    // subtract -1, we added "Default" as first index
-    int device_index = FindDeviceIndex(GUI.AudioDevice) - 1;
-    if (device_index < 0)
-        device_index = 0;
+	/* XAudio 2.9: CreateMasteringVoice takes LPCWSTR deviceId, not index. NULL = default device. */
+	LPCWSTR deviceId = NULL;
 
 	if ( FAILED(hr = pXAudio2->CreateMasteringVoice( &pMasterVoice, 2,
-		Settings.SoundPlaybackRate, 0, device_index, NULL ) ) ) {
+		Settings.SoundPlaybackRate, 0, deviceId, NULL ) ) ) {
 			DXTRACE_ERR_MSGBOX(TEXT("Unable to create mastering voice."),hr);
 			return false;
 	}
@@ -215,8 +213,9 @@ void CXAudio2::PushBuffer(UINT32 AudioBytes,BYTE *pAudioData,void *pContext)
 	xa2buffer.AudioBytes=AudioBytes;
 	xa2buffer.pAudioData=pAudioData;
 	xa2buffer.pContext=pContext;
-	InterlockedIncrement(&bufferCount);
-	pSourceVoice->SubmitSourceBuffer(&xa2buffer);
+	HRESULT hr = pSourceVoice->SubmitSourceBuffer(&xa2buffer);
+	if (SUCCEEDED(hr))
+		InterlockedIncrement(&bufferCount);
 }
 
 /*  CXAudio2::SetupSound
@@ -300,7 +299,7 @@ void CXAudio2::ProcessSound()
 	{
 		// Using rate control, we should always keep the emulator's sound buffers empty to
 		// maintain an accurate measurement.
-		if (availableSamples > (freeBytes >> 1))
+		if (availableSamples > (UINT32)(freeBytes >> 1))
 		{
 			S9xClearSamples();
 			return;
@@ -313,7 +312,7 @@ void CXAudio2::ProcessSound()
     if(Settings.SoundSync && !Settings.TurboMode && !Settings.Mute)
     {
         // no sound sync when speed is not set to 100%
-        while((freeBytes >> 1) < availableSamples)
+        while((freeBytes >> 1) < (int)availableSamples)
         {
             ResetEvent(GUI.SoundSyncEvent);
             if(!GUI.AllowSoundSync || WaitForSingleObject(GUI.SoundSyncEvent, 1000) != WAIT_OBJECT_0)
@@ -326,8 +325,6 @@ void CXAudio2::ProcessSound()
     }
 
 	if (partialOffset != 0)	{
-		assert(partialOffset < singleBufferBytes);
-		assert(bufferCount < blockCount);
 		BYTE *offsetBuffer = soundBuffer + writeOffset + partialOffset;
 		UINT32 samplesleftinblock = (singleBufferBytes - partialOffset) >> 1;
 
@@ -335,7 +332,6 @@ void CXAudio2::ProcessSound()
 		{
 			S9xMixSamples(offsetBuffer, availableSamples);
             partialOffset += availableSamples << 1;
-			assert(partialOffset < singleBufferBytes);
 			availableSamples = 0;
 		}
 		else
@@ -349,7 +345,7 @@ void CXAudio2::ProcessSound()
 		}
 	}
 
-	while (availableSamples >= singleBufferSamples && bufferCount < blockCount) {
+	while (availableSamples >= singleBufferSamples && bufferCount < (LONG)blockCount) {
 		BYTE *curBuffer = soundBuffer + writeOffset;
 		S9xMixSamples(curBuffer, singleBufferSamples);
 		PushBuffer(singleBufferBytes, curBuffer, NULL);
@@ -358,11 +354,9 @@ void CXAudio2::ProcessSound()
 		availableSamples -= singleBufferSamples;
 	}
 
-	// need to check this is less than a single buffer, otherwise we have a race condition with bufferCount
-	if (availableSamples > 0 && availableSamples < singleBufferSamples && bufferCount < blockCount) {
+	if (availableSamples > 0 && availableSamples < singleBufferSamples && bufferCount < (LONG)blockCount) {
 		S9xMixSamples(soundBuffer + writeOffset, availableSamples);
 		partialOffset = availableSamples << 1;
-		assert(partialOffset < singleBufferBytes);
 	}
 }
 
@@ -374,24 +368,8 @@ returns a vector of display names
 std::vector<std::wstring> CXAudio2::GetDeviceList()
 {
     std::vector<std::wstring> device_list;
-
-    if (pXAudio2)
-    {
-        UINT32 num_devices;
-        pXAudio2->GetDeviceCount(&num_devices);
-
-        device_list.push_back(_T("Default"));
-
-        for (unsigned int i = 0; i < num_devices; i++)
-        {
-            XAUDIO2_DEVICE_DETAILS device_details;
-            if (SUCCEEDED(pXAudio2->GetDeviceDetails(i, &device_details)))
-            {
-                device_list.push_back(device_details.DisplayName);
-            }
-        }
-    }
-
+    /* XAudio 2.9: GetDeviceCount/GetDeviceDetails removed. Use default device only. */
+    device_list.push_back(_T("Default"));
     return device_list;
 }
 

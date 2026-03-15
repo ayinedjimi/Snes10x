@@ -7,6 +7,15 @@
 #ifndef _PORT_H_
 #define _PORT_H_
 
+// Branch prediction hints — works on clang/gcc, no-op on MSVC
+#ifdef __clang__
+#define S9X_LIKELY(x)   __builtin_expect(!!(x), 1)
+#define S9X_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define S9X_LIKELY(x)   (x)
+#define S9X_UNLIKELY(x) (x)
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>

@@ -17,7 +17,7 @@ struct SOpcodes
 	void (*S9xOpcode) (void);
 };
 
-struct SICPU
+struct alignas(64) SICPU
 {
 	struct SOpcodes	*S9xOpcodes;
 	uint8	*S9xOpLengths;

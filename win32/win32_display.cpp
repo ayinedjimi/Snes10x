@@ -14,12 +14,9 @@
 #include "../font.h"
 #include "wsnes9x.h"
 #include "win32_display.h"
-#include "CDirect3D.h"
+#include "CDirect3D11.h"
 #if DIRECTDRAW_SUPPORT
-#include "CDirectDraw.h"
 #endif
-#include "COpenGL.h"
-#include "CVulkan.h"
 #include "IS9xDisplayOutput.h"
 
 #include "../filter/hq2x.h"
@@ -27,12 +24,9 @@
 #include "../apu/apu.h"
 
 // available display output methods
-CDirect3D Direct3D;
+CDirect3D11 Direct3D;
 #if DIRECTDRAW_SUPPORT
-CDirectDraw DirectDraw;
 #endif
-COpenGL OpenGL;
-CVulkan VulkanDriver;
 SSurface Src = {0};
 extern BYTE *ScreenBufferBlend;
 
@@ -107,37 +101,10 @@ returns true if successful, false otherwise
 bool WinDisplayReset(void)
 {
 	const TCHAR* driverNames[] = { TEXT("DirectDraw"), TEXT("Direct3D"), TEXT("OpenGL"), TEXT("Vulkan") };
-	static bool VulkanUsed = false;
-	static bool OpenGLUsed = false;
 	S9xDisplayOutput->DeInitialize();
 
-	switch(GUI.outputMethod) {
-		default:
-		case DIRECT3D:
-			S9xDisplayOutput = &Direct3D;
-			break;
-#if DIRECTDRAW_SUPPORT
-		case DIRECTDRAW:
-			S9xDisplayOutput = &DirectDraw;
-			break;
-#endif
-		case OPENGL:
-			if (VulkanUsed)
-			{
-				MessageBox(GUI.hWnd, TEXT("Changing to OpenGL requires a restart if you've already used Vulkan"), TEXT("Snes9x Display Driver"), MB_OK);
-				break;
-			}
-			S9xDisplayOutput = &OpenGL;
-			break;
-		case VULKAN:
-			if (OpenGLUsed)
-			{
-				MessageBox(GUI.hWnd, TEXT("Changing to Vulkan requires a restart if you've already used OpenGL"), TEXT("Snes9x Display Driver"), MB_OK);
-				break;
-			}
-			S9xDisplayOutput = &VulkanDriver;
-			break;
-	}
+	// D3D11 is the only renderer in Turbo build
+	S9xDisplayOutput = &Direct3D;
 
 	bool initialized = S9xDisplayOutput->Initialize(GUI.hWnd);
 
@@ -147,16 +114,9 @@ bool WinDisplayReset(void)
 
 		auto oldDriverName = driverNames[GUI.outputMethod];
 
-		if (GUI.outputMethod == VULKAN)
-		{
-			GUI.outputMethod = OPENGL;
-			S9xDisplayOutput = &OpenGL;
-		}
-		else
-		{
-			GUI.outputMethod = DIRECT3D;
-			S9xDisplayOutput = &Direct3D;
-		}
+		// All fallbacks go to D3D11
+		GUI.outputMethod = DIRECT3D;
+		S9xDisplayOutput = &Direct3D;
 
 		auto newDriverName = driverNames[GUI.outputMethod];
 		TCHAR msg[512];
@@ -167,10 +127,6 @@ bool WinDisplayReset(void)
 	}
 
 	if (initialized) {
-		if (S9xDisplayOutput == &VulkanDriver)
-			VulkanUsed = true;
-		if (S9xDisplayOutput == &OpenGL)
-			OpenGLUsed = true;
 		S9xGraphicsDeinit();
 		S9xSetWinPixelFormat();
 		S9xGraphicsInit();
@@ -302,9 +258,6 @@ bool8 S9xDeinitUpdate (int Width, int Height)
 
 	CheckOverscanOffset();
 
-	// avi writing
-	DoAVIVideoFrame();
-
 	// Clear some of the old SNES rendered image
 	// when the resolution becomes lower in x or y,
 	// otherwise the image processors (filters) might access
@@ -334,25 +287,7 @@ bool8 S9xDeinitUpdate (int Width, int Height)
         LastHeight = Height;
     }
 
-    if (GUI.DWMSync && GUI.outputMethod == OPENGL)
-    {
-        BOOL DWMEnabled = false;
-        DwmIsCompositionEnabledProc(&DWMEnabled);
-
-        if (GUI.FullScreen || !DWMEnabled)
-            ((COpenGL *)S9xDisplayOutput)->SetSwapInterval(GUI.Vsync ? 1 : 0);
-        else
-            ((COpenGL *)S9xDisplayOutput)->SetSwapInterval(0);
-
-        WinRefreshDisplay();
-
-        if (DWMEnabled && !GUI.FullScreen)
-            DwmFlushProc();
-    }
-    else
-    {
-        WinRefreshDisplay();
-    }
+    WinRefreshDisplay();
 
     return (true);
 }

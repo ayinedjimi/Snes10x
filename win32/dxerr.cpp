@@ -33,11 +33,49 @@
 
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
 #include <d2d1.h>
-#if WINVER < 0x0A00 // _WIN32_WINNT_WIN10
+#if WINVER < 0x0A00
 #include <wincodec.h>
 #endif
 #include <d2derr.h>
 #include <dwrite.h>
+#endif
+
+#if 0
+/* Fallback - manual definitions when headers conflict (unused with Windows SDK first in path) */
+#define D2DERR_WRONG_STATE 0x88990001L
+#define D2DERR_NOT_INITIALIZED 0x88990002L
+#define D2DERR_UNSUPPORTED_OPERATION 0x88990003L
+#define D2DERR_SCANNER_FAILED 0x88990004L
+#define D2DERR_SCREEN_ACCESS_DENIED 0x88990005L
+#define D2DERR_DISPLAY_STATE_INVALID 0x88990006L
+#define D2DERR_ZERO_VECTOR 0x88990007L
+#define D2DERR_INTERNAL_ERROR 0x88990008L
+#define D2DERR_DISPLAY_FORMAT_NOT_SUPPORTED 0x88990009L
+#define D2DERR_INVALID_CALL 0x8899000AL
+#define D2DERR_NO_HARDWARE_DEVICE 0x8899000BL
+#define D2DERR_RECREATE_TARGET 0x8899000CL
+#define D2DERR_TOO_MANY_SHADER_ELEMENTS 0x8899000DL
+#define D2DERR_SHADER_COMPILE_FAILED 0x8899000EL
+#define D2DERR_MAX_TEXTURE_SIZE_EXCEEDED 0x8899000FL
+#define D2DERR_UNSUPPORTED_VERSION 0x88990010L
+#define D2DERR_BAD_NUMBER 0x88990011L
+#define D2DERR_WRONG_FACTORY 0x88990012L
+#define D2DERR_LAYER_ALREADY_IN_USE 0x88990013L
+#define D2DERR_POP_CALL_DID_NOT_MATCH_PUSH 0x88990014L
+#define D2DERR_PUSH_POP_UNBALANCED 0x88990015L
+#define D2DERR_RENDER_TARGET_HAS_LAYER_OR_CLIPRECT 0x88990016L
+#define D2DERR_INCOMPATIBLE_BRUSH_TYPES 0x88990017L
+#define D2DERR_WIN32_ERROR 0x88990018L
+#define D2DERR_TARGET_NOT_GDI_COMPATIBLE 0x88990019L
+#define D2DERR_TEXT_EFFECT_IS_WRONG_TYPE 0x8899001AL
+#define D2DERR_TEXT_RENDERER_NOT_RELEASED 0x8899001BL
+#define DWRITE_E_FILEFORMAT 0x88985000L
+#define DWRITE_E_UNEXPECTED 0x88985001L
+#define DWRITE_E_NOFONT 0x88985002L
+#define DWRITE_E_FILENOTFOUND 0x88985003L
+#define DWRITE_E_FILEACCESS 0x88985004L
+#define DWRITE_E_FONTCOLLECTIONOBSOLETE 0x88985005L
+#define DWRITE_E_ALREADYREGISTERED 0x88985006L
 #endif
 
 #define XAUDIO2_E_INVALID_CALL          0x88960001
@@ -3280,6 +3318,8 @@ const WCHAR* WINAPI DXGetErrorStringW( _In_ HRESULT hr )
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
 
+#if 0
+/* D3D10/DXGI/D2D/DWrite/WIC - disabled: headers conflict between DXSDK and Windows SDK */
 // -------------------------------------------------------------
 // d3d10.h error codes
 // -------------------------------------------------------------
@@ -3413,6 +3453,7 @@ const WCHAR* WINAPI DXGetErrorStringW( _In_ HRESULT hr )
         CHK_ERRA(WINCODEC_ERR_INVALIDPROGRESSIVELEVEL)
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
+#endif
 
 // -------------------------------------------------------------
 // DXUT error codes
@@ -6664,6 +6705,7 @@ const char* WINAPI DXGetErrorStringA(_In_ HRESULT hr)
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
 
+#if 0
             // -------------------------------------------------------------
             // d3d10.h error codes
             // -------------------------------------------------------------
@@ -6797,6 +6839,7 @@ const char* WINAPI DXGetErrorStringA(_In_ HRESULT hr)
             CHK_ERRA(WINCODEC_ERR_INVALIDPROGRESSIVELEVEL)
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
+#endif
 
             // -------------------------------------------------------------
             // DXUT error codes
@@ -7133,6 +7176,7 @@ void WINAPI DXGetErrorDescriptionW( _In_ HRESULT hr, _Out_cap_(count) WCHAR* des
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
 
+#if 0
 // -------------------------------------------------------------
 // d3d10.h error codes
 // -------------------------------------------------------------
@@ -7266,6 +7310,7 @@ void WINAPI DXGetErrorDescriptionW( _In_ HRESULT hr, _Out_cap_(count) WCHAR* des
         CHK_ERR(WINCODEC_ERR_INVALIDPROGRESSIVELEVEL, "Invalid level for progressive WIC image decode.")
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
+#endif
 
 // -------------------------------------------------------------
 // DXUT error codes
@@ -7656,6 +7701,7 @@ void WINAPI DXGetErrorDescriptionA(_In_ HRESULT hr, _Out_cap_(count) char* desc,
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP
 
+#if 0
             // -------------------------------------------------------------
             // d3d10.h error codes
             // -------------------------------------------------------------
@@ -7789,6 +7835,7 @@ void WINAPI DXGetErrorDescriptionA(_In_ HRESULT hr, _Out_cap_(count) char* desc,
             CHK_ERR(WINCODEC_ERR_INVALIDPROGRESSIVELEVEL, "Invalid level for progressive WIC image decode.")
 
 #endif // !WINAPI_FAMILY || WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
+#endif
 
             // -------------------------------------------------------------
             // DXUT error codes

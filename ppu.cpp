@@ -1548,6 +1548,10 @@ void S9xSetCPU (uint8 Byte, uint16 Address)
 					}
 					else
 						CPU.FastROMSpeed = SLOW_ONE_CYCLE;
+					// Update SpeedMap for banks 0x80-0xFF where bit 15 is set
+					for (int b = 0x800; b < MEMMAP_NUM_BLOCKS; b++)
+						if (((b << MEMMAP_SHIFT) & 0x408000))
+							Memory.SpeedMap[b] = CPU.FastROMSpeed;
 					// we might currently be in FastROMSpeed region, S9xSetPCBase will update CPU.MemSpeed
 					S9xSetPCBase(Registers.PBPC);
 				}

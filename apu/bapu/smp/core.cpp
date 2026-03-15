@@ -26,14 +26,18 @@ void SMP::op_io(unsigned clocks) {
 
 uint8 SMP::op_read(uint16 addr) {
   tick();
-  if((addr & 0xfff0) == 0x00f0) return mmio_read(addr);
-  if(addr >= 0xffc0 && status.iplrom_enable) return iplrom[addr & 0x3f];
-  return apuram[addr];
+  // Fast path: vast majority of reads are plain RAM (not MMIO, not IPL ROM)
+  if(S9X_LIKELY((addr & 0xfff0) != 0x00f0)) {
+    if(S9X_LIKELY(addr < 0xffc0 || !status.iplrom_enable))
+      return apuram[addr];
+    return iplrom[addr & 0x3f];
+  }
+  return mmio_read(addr);
 }
 
 void SMP::op_write(uint16 addr, uint8 data) {
   tick();
-  if((addr & 0xfff0) == 0x00f0) mmio_write(addr, data);
+  if(S9X_UNLIKELY((addr & 0xfff0) == 0x00f0)) mmio_write(addr, data);
   apuram[addr] = data;  //all writes go to RAM, even MMIO writes
 }
 

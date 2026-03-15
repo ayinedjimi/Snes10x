@@ -70,7 +70,7 @@ typedef union
     uint32	xPBPC;
 }	PC_t;
 
-struct SRegisters
+struct alignas(64) SRegisters
 {
 	uint8	DB;
 	pair	P;

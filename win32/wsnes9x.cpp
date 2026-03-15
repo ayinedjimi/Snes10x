@@ -32,6 +32,7 @@
 #include "wsnes9x.h"
 #include "win32_sound.h"
 #include "win32_display.h"
+#include "CDirect3D11.h"
 #include "CCGShader.h"
 #include "common/video/opengl/shaders/glsl.h"
 #include "CShaderParamDlg.h"
@@ -51,6 +52,9 @@
 #include "InputCustom.h"
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <cmath>
+#include <intrin.h>
 
 #ifdef DEBUGGER
 #include "../debug.h"
@@ -1677,109 +1681,6 @@ LRESULT CALLBACK WinProc(
 		}
 		switch (cmd_id)
 		{
-		case ID_FILE_AVI_RECORDING:
-			if (!GUI.AVIOut)
-				PostMessage(GUI.hWnd, WM_COMMAND, ID_FILE_WRITE_AVI, NULL);
-			else
-				PostMessage(GUI.hWnd, WM_COMMAND, ID_FILE_STOP_AVI, NULL);
-			break;
-		case ID_FILE_WRITE_AVI:
-			{
-				RestoreGUIDisplay ();  //exit DirectX
-				OPENFILENAME  ofn;
-				TCHAR  szFileName[MAX_PATH];
-				TCHAR  szPathName[MAX_PATH];
-				SetCurrentDirectory(S9xGetDirectoryT(DEFAULT_DIR));
-				_tfullpath(szPathName, GUI.MovieDir, MAX_PATH);
-				_tmkdir(szPathName);
-
-				szFileName[0] = TEXT('\0');
-
-				memset( (LPVOID)&ofn, 0, sizeof(OPENFILENAME) );
-				ofn.lStructSize = sizeof(OPENFILENAME);
-				ofn.hwndOwner = GUI.hWnd;
-				ofn.lpstrFilter = FILE_INFO_AVI_FILE_TYPE TEXT("\0*.avi\0") FILE_INFO_ANY_FILE_TYPE TEXT("\0*.*\0\0");
-				ofn.lpstrFile = szFileName;
-				ofn.lpstrDefExt = TEXT("avi");
-				ofn.nMaxFile = MAX_PATH;
-				ofn.Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-				ofn.lpstrInitialDir = szPathName;
-				if(GetSaveFileName( &ofn ))
-				{
-					DoAVIOpen(szFileName);
-				}
-				RestoreSNESDisplay ();// re-enter after dialog
-			}
-			break;
-		case ID_FILE_STOP_AVI:
-			DoAVIClose(0);
-			ReInitSound();				// reenable sound output
-			break;
-		case ID_FILE_MOVIE_STOP:
-			S9xMovieStop(FALSE);
-			break;
-		case ID_FILE_MOVIE_PLAY:
-			{
-				RestoreGUIDisplay ();  //exit DirectX
-				OpenMovieParams op;
-				memset(&op, 0, sizeof(op));
-				if(DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_OPENMOVIE), hWnd, DlgOpenMovie, (LPARAM)&op) &&
-					op.Path[0]!='\0')
-				{
-					int err=S9xMovieOpen (_tToChar(op.Path), op.ReadOnly);
-					if(err!=SUCCESS)
-					{
-						TCHAR* err_string=MOVIE_ERR_COULD_NOT_OPEN;
-						switch(err)
-						{
-						case FILE_NOT_FOUND:
-							err_string=MOVIE_ERR_NOT_FOUND;
-							break;
-						case WRONG_FORMAT:
-							err_string=MOVIE_ERR_WRONG_FORMAT;
-							break;
-						case WRONG_VERSION:
-							err_string=MOVIE_ERR_WRONG_VERSION;
-							break;
-						}
-						MessageBox( hWnd, err_string, SNES9X_INFO, MB_OK);
-					}
-				}
-				RestoreSNESDisplay ();// re-enter after dialog
-			}
-			break;
-		case ID_FILE_MOVIE_RECORD:
-			{
-				RestoreGUIDisplay ();  //exit DirectX
-				OpenMovieParams op;
-				memset(&op, 0, sizeof(op));
-				if(DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_CREATEMOVIE), hWnd, DlgCreateMovie, (LPARAM)&op) &&
-					op.Path[0]!='\0')
-				{
-					startingMovie = true;
-					int err=S9xMovieCreate (_tToChar(op.Path), op.ControllersMask, op.Opts, op.Metadata, wcslen(op.Metadata));
-					startingMovie = false;
-					if(err!=SUCCESS)
-					{
-						TCHAR* err_string=MOVIE_ERR_COULD_NOT_OPEN;
-						switch(err)
-						{
-						case FILE_NOT_FOUND:
-							err_string=MOVIE_ERR_NOT_FOUND;
-							break;
-						case WRONG_FORMAT:
-							err_string=MOVIE_ERR_WRONG_FORMAT;
-							break;
-						case WRONG_VERSION:
-							err_string=MOVIE_ERR_WRONG_VERSION;
-							break;
-						}
-						MessageBox( hWnd, err_string, SNES9X_INFO, MB_OK);
-					}
-				}
-				RestoreSNESDisplay ();// re-enter after dialog
-			}
-			break;
 		case IDM_SNES_JOYPAD:
 			MOVIE_LOCKED_SETTING
 			GUI.ControllerOption = SNES_JOYPAD;
@@ -2337,6 +2238,195 @@ LRESULT CALLBACK WinProc(
 			DialogBox(g_hInst, MAKEINTRESOURCE(IDD_ABOUT), hWnd, DlgAboutProc);
 			RestoreSNESDisplay ();
 			break;
+		case ID_DEBUG_PERF:
+			{
+				if (Settings.StopEmulation) {
+					MessageBoxA(hWnd, "Load a ROM first.", "Performance Benchmark", MB_OK | MB_ICONWARNING);
+					break;
+				}
+
+				const int BENCH_FRAMES = 3000;
+				const int WARMUP_FRAMES = 30;
+
+				// Save state and disable speed limiter
+				bool wasPaused = Settings.Paused;
+				bool wasTurbo = Settings.TurboMode;
+				uint32 wasSkipFrames = Settings.SkipFrames;
+				Settings.Paused = false;
+				Settings.TurboMode = true;
+				Settings.SkipFrames = 0;
+
+				LARGE_INTEGER freq;
+				QueryPerformanceFrequency(&freq);
+				double freqD = (double)freq.QuadPart;
+
+				// Warm up
+				for (int i = 0; i < WARMUP_FRAMES; i++)
+					S9xMainLoop();
+
+				// Per-frame timing
+				std::vector<double> frameTimes(BENCH_FRAMES);
+				LARGE_INTEGER tPrev, tNow, tStart;
+				QueryPerformanceCounter(&tStart);
+				tPrev = tStart;
+				for (int i = 0; i < BENCH_FRAMES; i++) {
+					S9xMainLoop();
+					QueryPerformanceCounter(&tNow);
+					frameTimes[i] = (double)(tNow.QuadPart - tPrev.QuadPart) / freqD * 1000000.0; // microseconds
+					tPrev = tNow;
+				}
+
+				// Restore state
+				Settings.TurboMode = wasTurbo;
+				Settings.SkipFrames = wasSkipFrames;
+				Settings.Paused = wasPaused;
+
+				double elapsedTotal = (double)(tNow.QuadPart - tStart.QuadPart) / freqD;
+				double fps = BENCH_FRAMES / elapsedTotal;
+				double msPerFrame = (elapsedTotal / BENCH_FRAMES) * 1000.0;
+				double targetFPS = Settings.PAL ? 50.007 : 60.098;
+				double speedPct = (fps / targetFPS) * 100.0;
+
+				// Frame time stats
+				std::vector<double> sorted = frameTimes;
+				std::sort(sorted.begin(), sorted.end());
+				double ftMin = sorted[0];
+				double ftMax = sorted[BENCH_FRAMES - 1];
+				double ftMedian = sorted[BENCH_FRAMES / 2];
+				double ftP99 = sorted[(int)(BENCH_FRAMES * 0.99)];
+				double ftP1 = sorted[(int)(BENCH_FRAMES * 0.01)]; // 1% fastest
+				// 1% low FPS = based on slowest 1% of frames
+				double fps1Low = 1000000.0 / ftP99;
+				// Average
+				double ftSum = 0;
+				for (int i = 0; i < BENCH_FRAMES; i++) ftSum += frameTimes[i];
+				double ftAvg = ftSum / BENCH_FRAMES;
+				// Std deviation
+				double ftVar = 0;
+				for (int i = 0; i < BENCH_FRAMES; i++) {
+					double d = frameTimes[i] - ftAvg;
+					ftVar += d * d;
+				}
+				double ftStdDev = sqrt(ftVar / BENCH_FRAMES);
+
+				// Scores
+				double s9xScore = (fps / 60.0) * 1000.0;
+				double cpuUtil = (targetFPS / fps) * 100.0;
+				// Consistency score: 100 = perfectly stable, lower = more jitter
+				double consistencyScore = (ftMedian / ftP99) * 100.0;
+
+				// CPU info
+				char cpuBrand[49] = {0};
+				int cpuInfo[4];
+				__cpuid(cpuInfo, 0x80000000);
+				if ((unsigned)cpuInfo[0] >= 0x80000004) {
+					__cpuid((int*)(cpuBrand +  0), 0x80000002);
+					__cpuid((int*)(cpuBrand + 16), 0x80000003);
+					__cpuid((int*)(cpuBrand + 32), 0x80000004);
+				}
+				__cpuid(cpuInfo, 7);
+				bool hasAVX2 = (cpuInfo[1] & (1 << 5)) != 0;
+				__cpuid(cpuInfo, 1);
+				bool hasFMA = (cpuInfo[2] & (1 << 12)) != 0;
+
+				char buf[4096];
+				int len = 0;
+				len += sprintf(buf + len, "============================================================\r\n");
+				len += sprintf(buf + len, "   Snes10x v0.5 -- Performance Benchmark\r\n");
+				len += sprintf(buf + len, "============================================================\r\n\r\n");
+
+				len += sprintf(buf + len, "  +-----------------------------------------+\r\n");
+				len += sprintf(buf + len, "  |  >>> S9X SCORE:  %5d <<<              |\r\n", (int)(s9xScore + 0.5));
+				len += sprintf(buf + len, "  |  >>> RAW FPS:    %7.1f <<<             |\r\n", fps);
+				len += sprintf(buf + len, "  |  >>> CPU LOAD:   %5.1f%% <<<             |\r\n", cpuUtil);
+				len += sprintf(buf + len, "  |  >>> STABILITY:  %5.1f%% <<<             |\r\n", consistencyScore);
+				len += sprintf(buf + len, "  +-----------------------------------------+\r\n\r\n");
+
+				len += sprintf(buf + len, "--- Timing ---\r\n");
+				len += sprintf(buf + len, "Frames: %d (+ %d warmup, unthrottled)\r\n", BENCH_FRAMES, WARMUP_FRAMES);
+				len += sprintf(buf + len, "Elapsed: %.3f s\r\n", elapsedTotal);
+				len += sprintf(buf + len, "Speed: %.1f%% of %s (%.3f Hz)\r\n", speedPct,
+					Settings.PAL ? "PAL" : "NTSC", targetFPS);
+				len += sprintf(buf + len, "Headroom: %.0f frames/s spare\r\n", fps - targetFPS);
+
+				len += sprintf(buf + len, "\r\n--- Frame Time Distribution (us) ---\r\n");
+				len += sprintf(buf + len, "Avg:     %7.1f us  (%.3f ms)\r\n", ftAvg, ftAvg / 1000.0);
+				len += sprintf(buf + len, "Median:  %7.1f us\r\n", ftMedian);
+				len += sprintf(buf + len, "Min:     %7.1f us  (best)\r\n", ftMin);
+				len += sprintf(buf + len, "Max:     %7.1f us  (worst)\r\n", ftMax);
+				len += sprintf(buf + len, "StdDev:  %7.1f us  (jitter)\r\n", ftStdDev);
+				len += sprintf(buf + len, "P1:      %7.1f us  (1%% fastest)\r\n", ftP1);
+				len += sprintf(buf + len, "P99:     %7.1f us  (1%% slowest)\r\n", ftP99);
+				len += sprintf(buf + len, "1%% Low FPS: %.1f\r\n", fps1Low);
+
+				len += sprintf(buf + len, "\r\n--- System ---\r\n");
+				len += sprintf(buf + len, "CPU: %s\r\n", cpuBrand);
+				len += sprintf(buf + len, "AVX2: %s  FMA: %s\r\n", hasAVX2 ? "Yes" : "No", hasFMA ? "Yes" : "No");
+				len += sprintf(buf + len, "Compiler: clang-cl -O3 -march=haswell -mtune=native\r\n");
+
+				len += sprintf(buf + len, "\r\n--- ROM ---\r\n");
+				len += sprintf(buf + len, "%s\r\n", Memory.ROMFilename.c_str());
+				len += sprintf(buf + len, "Region: %s  Res: %ux%u  Bilinear: %d\r\n",
+					Settings.PAL ? "PAL" : "NTSC",
+					IPPU.RenderedScreenWidth, IPPU.RenderedScreenHeight,
+					Settings.BilinearFilter);
+
+				// Save to history file
+				{
+					SYSTEMTIME st;
+					GetLocalTime(&st);
+					char histPath[MAX_PATH];
+					sprintf(histPath, "%s\\benchmark_history.txt", S9xGetDirectory(DEFAULT_DIR).c_str());
+
+					FILE* hf = fopen(histPath, "a");
+					if (hf) {
+						fprintf(hf, "[%04d-%02d-%02d %02d:%02d:%02d] ",
+							st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+						fprintf(hf, "SCORE=%d FPS=%.1f ms=%.3f CPU=%.1f%% STAB=%.1f%% ",
+							(int)(s9xScore + 0.5), fps, msPerFrame, cpuUtil, consistencyScore);
+						fprintf(hf, "min=%.0fus avg=%.0fus max=%.0fus p99=%.0fus stddev=%.0fus ",
+							ftMin, ftAvg, ftMax, ftP99, ftStdDev);
+						fprintf(hf, "1%%low=%.0ffps frames=%d ROM=%s\n",
+							fps1Low, BENCH_FRAMES, Memory.ROMFilename.c_str());
+						fclose(hf);
+						len += sprintf(buf + len, "\r\nHistory saved: %s\r\n", histPath);
+					}
+				}
+
+				// Copy to clipboard
+				std::string info(buf, len);
+				if (OpenClipboard(hWnd)) {
+					EmptyClipboard();
+					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, info.size() + 1);
+					if (hMem) {
+						memcpy(GlobalLock(hMem), info.c_str(), info.size() + 1);
+						GlobalUnlock(hMem);
+						SetClipboardData(CF_TEXT, hMem);
+					}
+					CloseClipboard();
+				}
+				MessageBoxA(hWnd, info.c_str(), "Performance Benchmark (copied to clipboard)", MB_OK | MB_ICONINFORMATION);
+			}
+			break;
+		case ID_DEBUG_SHOWINFO:
+			{
+				extern CDirect3D11 Direct3D;
+				std::string info = Direct3D.GetDebugInfo();
+				// Copy to clipboard
+				if (OpenClipboard(hWnd)) {
+					EmptyClipboard();
+					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, info.size() + 1);
+					if (hMem) {
+						memcpy(GlobalLock(hMem), info.c_str(), info.size() + 1);
+						GlobalUnlock(hMem);
+						SetClipboardData(CF_TEXT, hMem);
+					}
+					CloseClipboard();
+				}
+				// Show as MessageBox (Ctrl+C also works here)
+				MessageBoxA(hWnd, info.c_str(), "snes9x Debug Info (copied to clipboard)", MB_OK | MB_ICONINFORMATION);
+			}
+			break;
 		case ID_FRAME_ADVANCE:
 			Settings.Paused = true;
 			Settings.FrameAdvance = true;
@@ -2416,8 +2506,10 @@ LRESULT CALLBACK WinProc(
 		return (0);
 	case WM_PAINT:
         {
-			// refresh screen
+			PAINTSTRUCT ps;
+			BeginPaint(hWnd, &ps);
 			WinRefreshDisplay();
+			EndPaint(hWnd, &ps);
             break;
         }
 	case WM_SYSCOMMAND:
@@ -2692,7 +2784,7 @@ BOOL WinInit( HINSTANCE hInstance)
     wndclass.hIconSm = NULL;
     wndclass.hCursor = NULL;
     wndclass.lpszMenuName = NULL;
-    wndclass.lpszClassName = TEXT("Snes9x: WndClass");
+    wndclass.lpszClassName = TEXT("Snes10x: WndClass");
 	wndclass.hbrBackground=(HBRUSH)GetStockObject(BLACK_BRUSH);
 
     GUI.hInstance = hInstance;
@@ -2768,7 +2860,7 @@ BOOL WinInit( HINSTANCE hInstance)
     AdjustWindowRectEx (&rect, dwStyle, FALSE, dwExStyle);
     if ((GUI.hWnd = CreateWindowEx (
         dwExStyle,
-        TEXT("Snes9x: WndClass"),
+        TEXT("Snes10x: WndClass"),
         buf,
         WS_CLIPSIBLINGS |
         WS_CLIPCHILDREN |
@@ -2780,6 +2872,26 @@ BOOL WinInit( HINSTANCE hInstance)
         hInstance,
         NULL)) == NULL)
         return FALSE;
+
+    // Set orange title bar (Windows 11+ DWM caption color)
+    {
+        typedef HRESULT (WINAPI *DwmSetWindowAttributeProc)(HWND, DWORD, LPCVOID, DWORD);
+        HMODULE hDwm = LoadLibrary(TEXT("dwmapi.dll"));
+        if (hDwm)
+        {
+            auto pDwmSetAttr = (DwmSetWindowAttributeProc)GetProcAddress(hDwm, "DwmSetWindowAttribute");
+            if (pDwmSetAttr)
+            {
+                // DWMWA_CAPTION_COLOR = 35, COLORREF is 0x00BBGGRR
+                COLORREF orange = RGB(255, 140, 0);  // dark orange
+                pDwmSetAttr(GUI.hWnd, 35, &orange, sizeof(orange));
+                // DWMWA_TEXT_COLOR = 36
+                COLORREF white = RGB(255, 255, 255);
+                pDwmSetAttr(GUI.hWnd, 36, &white, sizeof(white));
+            }
+            FreeLibrary(hDwm);
+        }
+    }
 
     GUI.hDC = GetDC (GUI.hWnd);
     GUI.GunSight = LoadCursor (hInstance, MAKEINTRESOURCE (IDC_CURSOR_SCOPE));

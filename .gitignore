@@ -503,3 +503,30 @@ MigrationBackup/
 .DS_Store
 *.lock
 profile
+
+# Build artifacts
+win32/x64/
+win32/*.exe
+win32/*.pdb
+win32/*.obj
+win32/*.ilk
+win32/*.lib
+win32/*.exp
+win32/build_out.txt
+win32/benchmark_history.txt
+build_out.txt
+pgo_data/
+
+# IDE
+.vs/
+.cursor/
+*.user
+*.suo
+
+# ROMs and saves
+*.sfc
+*.smc
+*.srm
+*.zip
+*.gz
+*.7z

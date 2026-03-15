@@ -966,12 +966,6 @@ BEGIN
         END
         MENUITEM "ROM Information...",          IDM_ROM_INFO,MFT_STRING,MFS_ENABLED
         MENUITEM MFT_SEPARATOR
-        MENUITEM "Movie Play...",               ID_FILE_MOVIE_PLAY,MFT_STRING,MFS_ENABLED
-        MENUITEM "Movie Record...",             ID_FILE_MOVIE_RECORD,MFT_STRING,MFS_ENABLED
-        MENUITEM "Movie Stop",                  ID_FILE_MOVIE_STOP,MFT_STRING,MFS_ENABLED
-        MENUITEM MFT_SEPARATOR
-        MENUITEM "AVI Recording",               ID_FILE_AVI_RECORDING,MFT_STRING,MFS_ENABLED
-        MENUITEM MFT_SEPARATOR
         MENUITEM "&Reset Game",                 ID_FILE_RESET,MFT_STRING,MFS_ENABLED
         MENUITEM "E&xit\tAlt+F4",               ID_FILE_EXIT,MFT_STRING,MFS_ENABLED
     END
@@ -1083,18 +1077,10 @@ BEGIN
         MENUITEM "&Search for New Cheats",      ID_CHEAT_SEARCH,MFT_STRING,MFS_ENABLED
         MENUITEM "&Apply Cheats",               ID_CHEAT_APPLY,MFT_STRING,MFS_CHECKED
     END
-    POPUP "&Netplay",                       0,MFT_STRING,MFS_ENABLED
+    POPUP "&Debug",                         0,MFT_STRING,MFS_ENABLED
     BEGIN
-        MENUITEM "&Connect to Server...",       ID_NETPLAY_CONNECT,MFT_STRING,MFS_ENABLED
-        MENUITEM "&Disconnect from Server",     ID_NETPLAY_DISCONNECT,MFT_STRING,MFS_ENABLED
-        MENUITEM MFT_SEPARATOR
-        MENUITEM "&Act as Server",              ID_NETPLAY_SERVER,MFT_STRING,MFS_ENABLED
-        MENUITEM "&Re-sync all Clients Using Freeze File Now", ID_NETPLAY_SYNC,MFT_STRING,MFS_ENABLED
-        MENUITEM "&Send ROM Image to Clients Now", ID_NETPLAY_ROM,MFT_STRING,MFS_ENABLED
-        MENUITEM "S&end ROM Image to Clients",  ID_NETPLAY_SEND_ROM_ON_CONNECT,MFT_STRING,MFS_ENABLED
-        MENUITEM "S&ync Using Reset Game",      ID_NETPLAY_SYNC_BY_RESET,MFT_STRING,MFS_CHECKED
-        MENUITEM MFT_SEPARATOR
-        MENUITEM "&Options...",                 ID_NETPLAY_OPTIONS,MFT_STRING,MFS_ENABLED
+        MENUITEM "Show Debug &Info...",         ID_DEBUG_SHOWINFO,MFT_STRING,MFS_ENABLED
+        MENUITEM "&Performance Benchmark...",   ID_DEBUG_PERF,MFT_STRING,MFS_ENABLED
     END
     POPUP "&Help",                          0,MFT_STRING,MFS_ENABLED
     BEGIN

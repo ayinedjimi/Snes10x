@@ -2467,6 +2467,26 @@ void CMemory::InitROM (void)
 		PostRomInitFunc();
 
     S9xVerifyControllers();
+
+	// Precompute SpeedMap[] — replaces memory_speed() branches with a single LUT lookup
+	for (int block = 0; block < MEMMAP_NUM_BLOCKS; block++)
+	{
+		uint32 address = block << MEMMAP_SHIFT; // start address of this 4KB block
+		// Replicate memory_speed() logic
+		if (address & 0x408000)
+		{
+			if (address & 0x800000)
+				SpeedMap[block] = CPU.FastROMSpeed;
+			else
+				SpeedMap[block] = SLOW_ONE_CYCLE;
+		}
+		else if ((address + 0x6000) & 0x4000)
+			SpeedMap[block] = SLOW_ONE_CYCLE;
+		else if ((address - 0x4000) & 0x7e00)
+			SpeedMap[block] = ONE_CYCLE;
+		else
+			SpeedMap[block] = TWO_CYCLES;
+	}
 }
 
 // memory map

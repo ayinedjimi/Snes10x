@@ -9,6 +9,7 @@
 #include "XAudio2.h"
 #include "../snes9x.h"
 #include <windows.h>
+#include <mutex>
 #include "IS9xSoundOutput.h"
 
 class CXAudio2 : public IXAudio2VoiceCallback, public IXAudio2EngineCallback, public IS9xSoundOutput
@@ -26,10 +27,11 @@ private:
 	UINT32 singleBufferSamples;				// samples in one block
 	UINT32 singleBufferBytes;				// bytes in one block
 	UINT32 blockCount;						// soundBuffer is divided into blockCount blocks
-											// currently set to 8
 	UINT32 writeOffset;						// offset into the buffer for the next block
 	UINT32 partialOffset;					// offset into non-complete block
 	uint8 *soundBuffer;						// the buffer itself
+
+	std::mutex bufferMtx;					// protects bufferCount/writeOffset/partialOffset
 
 	bool InitVoices(void);
 	void DeInitVoices(void);

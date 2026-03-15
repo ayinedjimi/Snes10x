@@ -118,30 +118,33 @@
 #define ROM_NAME_LEN	23
 #define AUTO_FRAMERATE	200
 
-struct SCPUState
+struct alignas(64) SCPUState
 {
-	uint32	Flags;
-	int32	Cycles;
-	int32	PrevCycles;
-	int32	V_Counter;
-	uint8	*PCBase;
-	bool8	NMIPending;
-	bool8	IRQLine;
-	bool8	IRQTransition;
-	bool8	IRQLastState;
-	bool8	IRQExternal;
-	int32	IRQPending;
-	int32	MemSpeed;
-	int32	MemSpeedx2;
-	int32	FastROMSpeed;
-	bool8	InDMA;
-	bool8	InHDMA;
-	bool8	InDMAorHDMA;
-	bool8	InWRAMDMAorHDMA;
-	uint8	HDMARanInDMA;
+	// === Cache line 0 (hot path — accessed every CPU cycle) ===
+	int32	Cycles;				// +0   most-accessed field
+	int32	NextEvent;			// +4   compared with Cycles every cycle
+	uint8	*PCBase;			// +8   opcode fetch base pointer (8 bytes on x64)
+	int32	MemSpeed;			// +16  memory access timing
+	int32	MemSpeedx2;			// +20  double memory speed
+	uint32	Flags;				// +24  CPU flags (checked in main loop)
+	bool8	InDMAorHDMA;		// +28  checked in addCyclesInMemoryAccess
+	uint8	WhichEvent;			// +29  event type
+	bool8	NMIPending;			// +30  NMI check
+	bool8	IRQLine;			// +31  IRQ check
+	int32	PrevCycles;			// +32
+	int32	V_Counter;			// +36
+	int32	IRQPending;			// +40
+	int32	FastROMSpeed;		// +44
+	bool8	IRQTransition;		// +48
+	bool8	IRQLastState;		// +49
+	bool8	IRQExternal;		// +50
+	bool8	InDMA;				// +51
+	bool8	InHDMA;				// +52
+	bool8	InWRAMDMAorHDMA;	// +53
+	uint8	HDMARanInDMA;		// +54
+	// --- padding to 56, then: ---
+	// === Cache line 1 (cold path) ===
 	int32	CurrentDMAorHDMAChannel;
-	uint8	WhichEvent;
-	int32	NextEvent;
 	bool8	WaitingForInterrupt;
 	uint32	AutoSaveTimer;
 	bool8	SRAMModified;

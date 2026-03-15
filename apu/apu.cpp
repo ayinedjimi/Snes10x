@@ -6,6 +6,10 @@
 
 #include <cmath>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include "../snes9x.h"
 #include "apu.h"
 #include "../msu1.h"
@@ -24,9 +28,10 @@ static const int APU_DENOMINATOR_PAL    = 709379;
 
 // Max number of samples we'll ever generate before call to port API and
 // moving the samples to the resampler.
-// This is 535 sample frames, which corresponds to 1 video frame + some leeway
-// for use with SoundSync, multiplied by 2, for left and right samples.
-static const int MINIMUM_BUFFER_SIZE = 550 * 2;
+// This is sample frames for the resampler ring buffer.
+// ~1.5 video frames worth of samples + leeway for thread scheduling jitter.
+// At 32040 Hz input / 50 Hz PAL = 640 samples/frame.
+static const int MINIMUM_BUFFER_SIZE = 800 * 2;
 
 namespace SNES {
 #include "bapu/dsp/blargg_endian.h"
@@ -60,6 +65,103 @@ namespace msu {
 static Resampler resampler;
 static std::vector<int16_t> resampler_buffer;
 } // namespace msu
+
+// ============================================================
+//  APU Thread — runs SPC700 + DSP on a dedicated thread
+// ============================================================
+namespace apu_thread {
+
+struct WorkItem {
+    int  cycles;           // SPC cycles to execute
+    bool do_dsp_sync;      // synchronize DSP after execution
+    bool do_land_samples;  // call S9xLandSamples after DSP sync
+};
+
+static std::thread            thread;
+static std::mutex             mtx;
+static std::condition_variable cv_work;   // signal APU: "work available"
+static std::condition_variable cv_done;   // signal CPU: "work complete"
+static std::atomic<bool>      running{false};
+static bool                   has_work = false;
+static bool                   work_done = true;
+static WorkItem               work;
+
+static void ThreadFunc()
+{
+    while (running.load(std::memory_order_relaxed))
+    {
+        // Wait for work
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv_work.wait(lock, [] { return has_work || !running.load(std::memory_order_relaxed); });
+            if (!running.load(std::memory_order_relaxed))
+                break;
+        }
+
+        // Execute APU work (no lock held — SMP/DSP state is exclusively ours)
+        SNES::smp.clock -= work.cycles;
+        SNES::smp.enter();
+
+        if (work.do_dsp_sync)
+            SNES::dsp.synchronize();
+
+        if (work.do_land_samples)
+            S9xLandSamples();
+
+        // Signal completion
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            has_work = false;
+            work_done = true;
+        }
+        cv_done.notify_one();
+    }
+}
+
+static void Start()
+{
+    if (running.load())
+        return;
+    has_work = false;
+    work_done = true;
+    running.store(true);
+    thread = std::thread(ThreadFunc);
+}
+
+static void Stop()
+{
+    if (!running.load())
+        return;
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        running.store(false);
+        has_work = false;
+    }
+    cv_work.notify_one();
+    if (thread.joinable())
+        thread.join();
+}
+
+// Wait for any pending APU work to complete
+static void WaitDone()
+{
+    std::unique_lock<std::mutex> lock(mtx);
+    cv_done.wait(lock, [] { return work_done; });
+}
+
+// Post work to APU thread (caller must have already called WaitDone)
+static void PostWork(int cycles, bool dsp_sync, bool land_samples)
+{
+    std::lock_guard<std::mutex> lock(mtx);
+    work.cycles = cycles;
+    work.do_dsp_sync = dsp_sync;
+    work.do_land_samples = land_samples;
+    work_done = false;
+    has_work = true;
+    cv_work.notify_one();
+}
+
+} // namespace apu_thread
 
 static void UpdatePlaybackRate(void);
 static void SPCSnapshotCallback(void);
@@ -235,6 +337,7 @@ bool8 S9xInitAPU(void)
 
 void S9xDeinitAPU(void)
 {
+    apu_thread::Stop();
     S9xMSU1DeInit();
     msu::resampler_buffer.clear();
 }
@@ -253,12 +356,14 @@ static inline int S9xAPUGetClockRemainder(int32 cpucycles)
 
 uint8 S9xAPUReadPort(int port)
 {
+    // Must sync APU to current CPU cycle before reading port
     S9xAPUExecute();
     return ((uint8)SNES::smp.port_read(port & 3));
 }
 
 void S9xAPUWritePort(int port, uint8 byte)
 {
+    // Must sync APU to current CPU cycle before writing port
     S9xAPUExecute();
     SNES::cpu.port_write(port & 3, byte);
 }
@@ -270,21 +375,41 @@ void S9xAPUSetReferenceTime(int32 cpucycles)
 
 void S9xAPUExecute(void)
 {
-    int cycles = S9xAPUGetClock(CPU.Cycles);
-    spc::remainder = S9xAPUGetClockRemainder(CPU.Cycles);
-    SNES::smp.clock -= cycles;
-    SNES::smp.enter();
+    // Wait for any async APU work to complete first
+    if (apu_thread::running.load(std::memory_order_relaxed))
+        apu_thread::WaitDone();
 
-    S9xAPUSetReferenceTime(CPU.Cycles);
+    // Then run any remaining cycles synchronously (catches up to current CPU.Cycles)
+    int cycles = S9xAPUGetClock(CPU.Cycles);
+    if (cycles > 0)
+    {
+        spc::remainder = S9xAPUGetClockRemainder(CPU.Cycles);
+        SNES::smp.clock -= cycles;
+        SNES::smp.enter();
+        S9xAPUSetReferenceTime(CPU.Cycles);
+    }
 }
 
 void S9xAPUEndScanline(void)
 {
-    S9xAPUExecute();
-    SNES::dsp.synchronize();
+    // Start APU thread if not running yet
+    if (!apu_thread::running.load(std::memory_order_relaxed))
+        apu_thread::Start();
 
-    if (spc::resampler.space_filled() >= APU_SAMPLE_BLOCK)
-        S9xLandSamples();
+    // Wait for previous async work to complete
+    apu_thread::WaitDone();
+
+    // Calculate how many SPC cycles to run
+    int cycles = S9xAPUGetClock(CPU.Cycles);
+    spc::remainder = S9xAPUGetClockRemainder(CPU.Cycles);
+
+    // Update reference time NOW (before posting work, so port access
+    // during next scanline uses correct baseline)
+    S9xAPUSetReferenceTime(CPU.Cycles);
+
+    // Post work to APU thread — CPU continues immediately
+    bool land = (spc::resampler.space_filled() >= APU_SAMPLE_BLOCK);
+    apu_thread::PostWork(cycles, true, land);
 }
 
 void S9xAPUTimingSetSpeedup(int ticks)
@@ -303,6 +428,9 @@ void S9xAPUTimingSetSpeedup(int ticks)
 
 void S9xResetAPU(void)
 {
+    // Stop APU thread during reset
+    apu_thread::Stop();
+
     spc::reference_time = 0;
     spc::remainder = 0;
 
@@ -316,6 +444,9 @@ void S9xResetAPU(void)
 
 void S9xSoftResetAPU(void)
 {
+    // Stop APU thread during reset
+    apu_thread::Stop();
+
     spc::reference_time = 0;
     spc::remainder = 0;
     SNES::cpu.reset();
@@ -327,6 +458,10 @@ void S9xSoftResetAPU(void)
 
 void S9xAPUSaveState(uint8 *block)
 {
+    // Ensure APU is fully synced before saving
+    if (apu_thread::running.load(std::memory_order_relaxed))
+        apu_thread::WaitDone();
+
     uint8 *ptr = block;
 
     SNES::smp.save_state(&ptr);
@@ -346,6 +481,9 @@ void S9xAPUSaveState(uint8 *block)
 
 void S9xAPULoadState(uint8 *block)
 {
+    // Stop APU thread during state load
+    apu_thread::Stop();
+
     uint8 *ptr = block;
 
     SNES::smp.load_state(&ptr);
@@ -369,6 +507,9 @@ static void to_var_from_buf(uint8 **buf, void *var, size_t size)
 #define IF_0_THEN_256(n) ((uint8)((n)-1) + 1)
 void S9xAPULoadBlarggState(uint8 *oldblock)
 {
+    // Stop APU thread during state load
+    apu_thread::Stop();
+
     uint8 *ptr = oldblock;
 
     SNES::SPC_State_Copier copier(&ptr, to_var_from_buf);
@@ -472,6 +613,10 @@ void S9xAPULoadBlarggState(uint8 *oldblock)
 
 bool8 S9xSPCDump(const char *filename)
 {
+    // Sync APU before dumping
+    if (apu_thread::running.load(std::memory_order_relaxed))
+        apu_thread::WaitDone();
+
     FILE *fs;
     uint8 buf[SPC_FILE_SIZE];
     size_t ignore;

@@ -22,32 +22,32 @@
     <ProjectName>snes9x</ProjectName>
     <ProjectGuid>{B86059D8-C9A6-46BE-8FBA-3170C54F1DFD}</ProjectGuid>
     <RootNamespace>Snes9X</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Unicode|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Unicode|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Unicode|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Unicode|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -118,7 +118,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\;$(ProjectDir)..\..\;$(ProjectDir)zlib\src;$(ProjectDir)..\unzip;$(ProjectDir)libpng\src;$(ProjectDir)..\apu\bapu;$(ProjectDir)..\external\glslang;$(ProjectDir)..\external\stb;$(ProjectDir)..\external\vulkan-headers\include;$(ProjectDir)..\external\VulkanMemoryAllocator-Hpp\include;$(ProjectDir)..\external\imgui</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;ALLOW_CPU_OVERCLOCK;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;NETPLAY_SUPPORT;D3D_DEBUG_INFO;DIRECTDRAW_SUPPORT;USE_SLANG;%(PreprocessorDefinitions);VK_USE_PLATFORM_WIN32_KHR;VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1;VULKAN_HPP_NO_EXCEPTIONS=1;VULKAN_HPP_NO_NODISCARD_WARNINGS=1;VMA_DYNAMIC_VULKAN_FUNCTIONS=1;VMA_STATIC_VULKAN_FUNCTIONS=0;VMA_USE_STL_SHARED_MUTEX=0;IMGUI_IMPL_VULKAN_NO_PROTOTYPES</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;ALLOW_CPU_OVERCLOCK;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;D3D_DEBUG_INFO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
       <PrecompiledHeader />
@@ -131,7 +131,9 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <AdditionalOptions>/Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <CLToolExe>clang-cl.exe</CLToolExe>
+      <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
+      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -169,7 +171,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\;$(ProjectDir)..\..\;$(ProjectDir)zlib\src;$(ProjectDir)..\unzip;$(ProjectDir)libpng\src;$(ProjectDir)..\apu\bapu;$(ProjectDir)..\external\glslang;$(ProjectDir)..\external\stb;$(ProjectDir)..\external\vulkan-headers\include;$(ProjectDir)..\external\VulkanMemoryAllocator-Hpp\include;$(ProjectDir)..\external\imgui</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;ALLOW_CPU_OVERCLOCK;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;NETPLAY_SUPPORT;D3D_DEBUG_INFO;DIRECTDRAW_SUPPORT;USE_SLANG;%(PreprocessorDefinitions);VK_USE_PLATFORM_WIN32_KHR;VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1;VULKAN_HPP_NO_EXCEPTIONS=1;VULKAN_HPP_NO_NODISCARD_WARNINGS=1;VMA_DYNAMIC_VULKAN_FUNCTIONS=1;VMA_STATIC_VULKAN_FUNCTIONS=0;VMA_USE_STL_SHARED_MUTEX=0;IMGUI_IMPL_VULKAN_NO_PROTOTYPES</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;ALLOW_CPU_OVERCLOCK;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;D3D_DEBUG_INFO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
       <PrecompiledHeader />
@@ -182,7 +184,9 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <AdditionalOptions>/Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <CLToolExe>clang-cl.exe</CLToolExe>
+      <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
+      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -223,9 +227,9 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\;$(ProjectDir)..\..\;$(ProjectDir)zlib\src;$(ProjectDir)..\unzip;$(ProjectDir)libpng\src;$(ProjectDir)..\apu\bapu;$(ProjectDir)..\external\glslang;$(ProjectDir)..\external\stb;$(ProjectDir)..\external\vulkan-headers\include;$(ProjectDir)..\external\VulkanMemoryAllocator-Hpp\include;$(ProjectDir)..\external\imgui</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;ALLOW_CPU_OVERCLOCK;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;NETPLAY_SUPPORT;DIRECTDRAW_SUPPORT;USE_SLANG;%(PreprocessorDefinitions);VK_USE_PLATFORM_WIN32_KHR;VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1;VULKAN_HPP_NO_EXCEPTIONS=1;VULKAN_HPP_NO_NODISCARD_WARNINGS=1;VMA_DYNAMIC_VULKAN_FUNCTIONS=1;VMA_STATIC_VULKAN_FUNCTIONS=0;VMA_USE_STL_SHARED_MUTEX=0;IMGUI_IMPL_VULKAN_NO_PROTOTYPES</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -239,7 +243,9 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <AdditionalOptions>/Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <CLToolExe>clang-cl.exe</CLToolExe>
+      <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
+      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -278,9 +284,9 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\;$(ProjectDir)..\..\;$(ProjectDir)zlib\src;$(ProjectDir)..\unzip;$(ProjectDir)libpng\src;$(ProjectDir)..\apu\bapu;$(ProjectDir)..\external\glslang;$(ProjectDir)..\external\stb;$(ProjectDir)..\external\vulkan-headers\include;$(ProjectDir)..\external\VulkanMemoryAllocator-Hpp\include;$(ProjectDir)..\external\imgui</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;ALLOW_CPU_OVERCLOCK;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;NETPLAY_SUPPORT;DIRECTDRAW_SUPPORT;USE_SLANG;%(PreprocessorDefinitions);VK_USE_PLATFORM_WIN32_KHR;VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1;VULKAN_HPP_NO_EXCEPTIONS=1;VULKAN_HPP_NO_NODISCARD_WARNINGS=1;VMA_DYNAMIC_VULKAN_FUNCTIONS=1;VMA_STATIC_VULKAN_FUNCTIONS=0;VMA_USE_STL_SHARED_MUTEX=0;IMGUI_IMPL_VULKAN_NO_PROTOTYPES</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;HAVE_LIBPNG;JMA_SUPPORT;ZLIB;UNZIP_SUPPORT;__WIN32__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <StructMemberAlignment>Default</StructMemberAlignment>
@@ -294,7 +300,9 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <AdditionalOptions>/Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <CLToolExe>clang-cl.exe</CLToolExe>
+      <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
+      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing -march=haswell -mtune=native  /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -303,7 +311,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>comctl32.lib;winmm.lib;opengl32.lib;glu32.lib;wsock32.lib;dsound.lib;dxguid.lib;delayimp.lib;vfw32.lib;msxml2.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;winmm.lib;opengl32.lib;glu32.lib;wsock32.lib;dsound.lib;dxguid.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;delayimp.lib;vfw32.lib;msxml2.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(IntDir)$(ProjectName).pdb</ProgramDatabaseFile>
@@ -345,10 +353,9 @@
     <ClInclude Include="..\apu\resampler.h" />
     <ClInclude Include="..\external\imgui\imconfig.h" />
     <ClInclude Include="..\external\imgui\imgui.h" />
-    <ClInclude Include="..\external\imgui\imgui_impl_dx9.h" />
+    <ClInclude Include="..\external\imgui\imgui_impl_dx11.h" />
     <ClInclude Include="..\external\imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="..\external\imgui\imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="..\external\imgui\imgui_impl_vulkan.h" />
     <ClInclude Include="..\external\imgui\imgui_internal.h" />
     <ClInclude Include="..\external\imgui\imstb_rectpack.h" />
     <ClInclude Include="..\external\imgui\imstb_textedit.h" />
@@ -428,16 +435,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Unicode|x64'">true</ExcludedFromBuild>
     </CustomBuild>
     <ClInclude Include="..\msu1.h" />
-    <ClInclude Include="..\common\video\opengl\shaders\glsl.h" />
-    <ClInclude Include="..\common\video\opengl\shaders\shader_helpers.h" />
-    <ClInclude Include="..\common\video\opengl\shaders\shader_platform.h" />
-    <ClInclude Include="..\external\SPIRV-Cross\spirv.hpp" />
-    <ClInclude Include="..\external\SPIRV-Cross\spirv_cfg.hpp" />
-    <ClInclude Include="..\external\SPIRV-Cross\spirv_common.hpp" />
-    <ClInclude Include="..\external\SPIRV-Cross\spirv_cross.hpp" />
-    <ClInclude Include="..\external\SPIRV-Cross\spirv_cross_parsed_ir.hpp" />
-    <ClInclude Include="..\external\SPIRV-Cross\spirv_glsl.hpp" />
-    <ClInclude Include="..\external\SPIRV-Cross\spirv_parser.hpp" />
     <ClInclude Include="..\statemanager.h" />
     <ClInclude Include="..\sha256.h" />
     <ClInclude Include="..\bml.h" />
@@ -450,34 +447,14 @@
     <ClInclude Include="..\unzip\mztools.h" />
     <ClInclude Include="..\unzip\unzip.h" />
     <ClInclude Include="..\unzip\zip.h" />
-    <ClInclude Include="..\common\video\vulkan\slang_helpers.hpp" />
-    <ClInclude Include="..\common\video\vulkan\slang_preset.hpp" />
-    <ClInclude Include="..\common\video\vulkan\slang_preset_ini.hpp" />
-    <ClInclude Include="..\common\video\vulkan\slang_shader.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_context.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_common.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_pipeline_image.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_shader_chain.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_simple_output.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_slang_pipeline.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_swapchain.hpp" />
-    <ClInclude Include="..\common\video\vulkan\vulkan_texture.hpp" />
     <ClInclude Include="AVIOutput.h" />
     <ClInclude Include="CCGShader.h" />
-    <ClInclude Include="CD3DCG.h" />
-    <CustomBuild Include="CDirect3D.h" />
-    <ClInclude Include="CDirectDraw.h" />
-    <ClInclude Include="cgFunctions.h" />
-    <ClInclude Include="CGLCG.h" />
-    <ClInclude Include="cgMini.h" />
+    <CustomBuild Include="CDirect3D11.h" />
     <ClInclude Include="CSaveLoadWithPreviewDlg.h" />
-    <ClInclude Include="COpenGL.h" />
     <ClInclude Include="CShaderParamDlg.h" />
-    <ClInclude Include="CVulkan.h" />
     <ClInclude Include="CWaveOut.h" />
     <ClInclude Include="CXAudio2.h" />
     <ClInclude Include="dxerr.h" />
-    <ClInclude Include="gl_core_3_1.h" />
     <ClInclude Include="image_functions.h" />
     <ClInclude Include="InputCustom.h" />
     <ClInclude Include="IS9xDisplayOutput.h" />
@@ -523,9 +500,8 @@
     <ClCompile Include="..\external\imgui\imgui.cpp" />
     <ClCompile Include="..\external\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\external\imgui\imgui_draw.cpp" />
-    <ClCompile Include="..\external\imgui\imgui_impl_dx9.cpp" />
+    <ClCompile Include="..\external\imgui\imgui_impl_dx11.cpp" />
     <ClCompile Include="..\external\imgui\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="..\external\imgui\imgui_impl_vulkan.cpp" />
     <ClCompile Include="..\external\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\external\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\external\imgui\snes9x_imgui.cpp" />
@@ -577,14 +553,6 @@
     <ClCompile Include="..\seta010.cpp" />
     <ClCompile Include="..\seta011.cpp" />
     <ClCompile Include="..\seta018.cpp" />
-    <ClCompile Include="..\common\video\opengl\shaders\glsl.cpp" />
-    <ClCompile Include="..\common\video\opengl\shaders\shader_helpers.cpp" />
-    <ClCompile Include="..\common\video\opengl\shaders\slang.cpp" />
-    <ClCompile Include="..\external\SPIRV-Cross\spirv_cfg.cpp" />
-    <ClCompile Include="..\external\SPIRV-Cross\spirv_cross.cpp" />
-    <ClCompile Include="..\external\SPIRV-Cross\spirv_cross_parsed_ir.cpp" />
-    <ClCompile Include="..\external\SPIRV-Cross\spirv_glsl.cpp" />
-    <ClCompile Include="..\external\SPIRV-Cross\spirv_parser.cpp" />
     <ClCompile Include="..\snapshot.cpp" />
     <ClCompile Include="..\snes9x.cpp" />
     <ClCompile Include="..\spc7110.cpp" />
@@ -620,37 +588,15 @@
     <ClCompile Include="..\unzip\mztools.c" />
     <ClCompile Include="..\unzip\unzip.c" />
     <ClCompile Include="..\unzip\zip.c" />
-    <ClCompile Include="..\common\video\vulkan\slang_helpers.cpp" />
-    <ClCompile Include="..\common\video\vulkan\slang_preset.cpp" />
-    <ClCompile Include="..\common\video\vulkan\slang_preset_ini.cpp" />
-    <ClCompile Include="..\common\video\vulkan\slang_preset_test.cpp" />
-    <ClCompile Include="..\common\video\vulkan\slang_shader.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vk_mem_alloc_implementation.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_context.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_common.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_hpp_storage.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_pipeline_image.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_shader_chain.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_simple_output.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_slang_pipeline.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_swapchain.cpp" />
-    <ClCompile Include="..\common\video\vulkan\vulkan_texture.cpp" />
     <ClCompile Include="AVIOutput.cpp" />
     <ClCompile Include="CCGShader.cpp" />
-    <ClCompile Include="CD3DCG.cpp" />
-    <ClCompile Include="CDirect3D.cpp" />
-    <ClCompile Include="CDirectDraw.cpp" />
-    <ClCompile Include="cgFunctions.cpp" />
-    <ClCompile Include="CGLCG.cpp" />
+    <ClCompile Include="CDirect3D11.cpp" />
     <ClCompile Include="CSaveLoadWithPreviewDlg.cpp" />
-    <ClCompile Include="COpenGL.cpp" />
     <ClCompile Include="CShaderParamDlg.cpp" />
-    <ClCompile Include="CVulkan.cpp" />
     <ClCompile Include="CWaveOut.cpp" />
     <ClCompile Include="CXAudio2.cpp" />
     <ClCompile Include="DumpAtEnd.cpp" />
     <ClCompile Include="dxerr.cpp" />
-    <ClCompile Include="gl_core_3_1.c" />
     <ClCompile Include="image_functions.cpp" />
     <ClCompile Include="InputCustom.cpp" />
     <ClCompile Include="render.cpp" />
@@ -695,12 +641,6 @@
     <Image Include="rsrc\ud.bmp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="glslang\glslang\glslang.vcxproj">
-      <Project>{bdb39616-8279-33b4-8b93-9049a49bfebb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="glslang\SPIRV\SPIRV.vcxproj">
-      <Project>{b5cc37ae-e321-3064-a3d7-9d41ceed9d4e}</Project>
-    </ProjectReference>
     <ProjectReference Include="libpng\libpng.vcxproj">
       <Project>{95804e5f-b69e-4e2a-925e-52fafc19edbf}</Project>
     </ProjectReference>

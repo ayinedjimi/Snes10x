@@ -21,7 +21,7 @@
 	if (!CPU.InDMAorHDMA) \
 	{ \
 		CPU.Cycles += speed; \
-		while (CPU.Cycles >= CPU.NextEvent) \
+		while (S9X_UNLIKELY(CPU.Cycles >= CPU.NextEvent)) \
 			S9xDoHEventProcessing(); \
 	}
 
@@ -29,29 +29,17 @@
 	if (!CPU.InDMAorHDMA) \
 	{ \
 		CPU.Cycles += speed << 1; \
-		while (CPU.Cycles >= CPU.NextEvent) \
+		while (S9X_UNLIKELY(CPU.Cycles >= CPU.NextEvent)) \
 			S9xDoHEventProcessing(); \
 	}
 
 extern uint8	OpenBus;
 
+// memory_speed() replaced by Memory.SpeedMap[] LUT — see memmap.cpp InitROM()
+// Kept as fallback for addresses not aligned to block boundaries
 static inline int32 memory_speed (uint32 address)
 {
-	if (address & 0x408000)
-	{
-		if (address & 0x800000)
-			return (CPU.FastROMSpeed);
-
-		return (SLOW_ONE_CYCLE);
-	}
-
-	if ((address + 0x6000) & 0x4000)
-		return (SLOW_ONE_CYCLE);
-
-	if ((address - 0x4000) & 0x7e00)
-		return (ONE_CYCLE);
-
-	return (TWO_CYCLES);
+	return Memory.SpeedMap[(address & 0xffffff) >> MEMMAP_SHIFT];
 }
 
 inline uint8 S9xGetByte (uint32 Address)

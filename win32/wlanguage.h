@@ -6,13 +6,16 @@
 
 /* This is where all the GUI text strings will eventually end up */
 
-#define WINDOW_TITLE TEXT("Snes9x")
+#define WINDOW_TITLE TEXT("Snes10x v0.5")
 
 // the windows registry is no longer used
 //#define MY_REG_KEY   "Software\\Emulators\\Snes9x"
 //#define REG_KEY_VER  "1.31"
 
-#define DISCLAIMER_TEXT        TEXT("Snes9x v%s for Windows.\r\n\
+#define DISCLAIMER_TEXT        TEXT("Snes10x v%s for Windows.\r\n\r\n\
+Custom build by Ayi NEDJIMI (2024-2026)\r\n\
+D3D11 renderer, AVX2/Haswell, async render thread, APU threading.\r\n\r\n\
+Based on Snes9x - original authors:\r\n\
 (c) Copyright 1996 - 2002  Gary Henderson and Jerremy Koot (jkoot@snes9x.com)\r\n\
 (c) Copyright 2002 - 2004  Matthew Kendora\r\n\
 (c) Copyright 2002 - 2005  Peter Bortas\r\n\
@@ -30,13 +33,13 @@ up-to-the-minute information and help on Snes9x.\r\n\r\n\
 Nintendo is a trademark.")
 
 
-#define APP_NAME TEXT("Snes9x")
+#define APP_NAME TEXT("Snes10x")
 // possible global strings
-#define SNES9X_INFO TEXT("Snes9x: Information")
-#define SNES9X_WARN TEXT("Snes9x: WARNING!")
-#define SNES9X_DXS TEXT("Snes9x: DirectSound")
-#define SNES9X_SNDQ TEXT("Snes9x: Sound CPU Question")
-#define SNES9X_NP_ERROR TEXT("Snes9x: NetPlay Error")
+#define SNES9X_INFO TEXT("Snes10x: Information")
+#define SNES9X_WARN TEXT("Snes10x: WARNING!")
+#define SNES9X_DXS TEXT("Snes10x: DirectSound")
+#define SNES9X_SNDQ TEXT("Snes10x: Sound CPU Question")
+#define SNES9X_NP_ERROR TEXT("Snes10x: NetPlay Error")
 #define BUTTON_OK TEXT("&OK")
 #define BUTTON_CANCEL TEXT("&Cancel")
 
