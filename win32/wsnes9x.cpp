@@ -2233,6 +2233,24 @@ LRESULT CALLBACK WinProc(
             else
                 RestoreSNESDisplay();
             break;
+		// Snes10x Effects toggles
+		case ID_EFFECTS_GAMMA:
+			GUI.EffectGamma ^= true;
+			CheckMenuStates();
+			break;
+		case ID_EFFECTS_SATURATION:
+			GUI.EffectSaturation ^= true;
+			CheckMenuStates();
+			break;
+		case ID_EFFECTS_WARMTH:
+			GUI.EffectWarmth ^= true;
+			CheckMenuStates();
+			break;
+		case ID_EFFECTS_CRT:
+			GUI.EffectCRT ^= true;
+			CheckMenuStates();
+			break;
+
 		case ID_HELP_ABOUT:
 			RestoreGUIDisplay ();
 			DialogBox(g_hInst, MAKEINTRESOURCE(IDD_ABOUT), hWnd, DlgAboutProc);
@@ -3859,6 +3877,20 @@ static void CheckMenuStates ()
 
 	mii.fState = Settings.DisplayFrameRate ? MFS_CHECKED : MFS_UNCHECKED;
     SetMenuItemInfo (GUI.hMenu, ID_VIDEO_SHOWFRAMERATE, FALSE, &mii);
+
+	// Snes10x Effects checkmarks (must use submenu handle: File=0, Emulation=1, Input=2, Sound=3, Video=4, Cheat=5, Effects=6, Debug=7, Help=8)
+	HMENU hEffectsMenu = GetSubMenu(GUI.hMenu, 6);
+	if (hEffectsMenu)
+	{
+		mii.fState = GUI.EffectGamma ? MFS_CHECKED : MFS_UNCHECKED;
+		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_GAMMA, FALSE, &mii);
+		mii.fState = GUI.EffectSaturation ? MFS_CHECKED : MFS_UNCHECKED;
+		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_SATURATION, FALSE, &mii);
+		mii.fState = GUI.EffectWarmth ? MFS_CHECKED : MFS_UNCHECKED;
+		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_WARMTH, FALSE, &mii);
+		mii.fState = GUI.EffectCRT ? MFS_CHECKED : MFS_UNCHECKED;
+		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_CRT, FALSE, &mii);
+	}
 
 	mii.fState = (Settings.Paused && !Settings.StopEmulation) ? MFS_CHECKED : MFS_UNCHECKED;
     SetMenuItemInfo (GUI.hMenu, ID_FILE_PAUSE, FALSE, &mii);
