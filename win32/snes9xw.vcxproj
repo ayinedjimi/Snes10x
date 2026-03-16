@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug Unicode|Win32">
@@ -133,7 +133,7 @@
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <CLToolExe>clang-cl.exe</CLToolExe>
       <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
-      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd9002 /Zc:__cplusplus -m64 -O3 -fno-strict-aliasing $(AdditionalOptions) -w -Wno-unknown-warning-option -Wno-macro-redefined -Wno-pragma-pack -Wno-ignored-pragma-intrinsic -Wno-ignored-attributes -Wno-unknown-pragmas -Wno-unused-command-line-argument -Wno-unused-function -Wno-deprecated-declarations</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -186,7 +186,7 @@
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <CLToolExe>clang-cl.exe</CLToolExe>
       <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
-      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd9002 /Zc:__cplusplus -m64 -O3 -fno-strict-aliasing $(AdditionalOptions) -w -Wno-unknown-warning-option -Wno-macro-redefined -Wno-pragma-pack -Wno-ignored-pragma-intrinsic -Wno-ignored-attributes -Wno-unknown-pragmas -Wno-unused-command-line-argument -Wno-unused-function -Wno-deprecated-declarations</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -245,7 +245,7 @@
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <CLToolExe>clang-cl.exe</CLToolExe>
       <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
-      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd9002 /Zc:__cplusplus -m64 -O3 -fno-strict-aliasing $(AdditionalOptions) -w -Wno-unknown-warning-option -Wno-macro-redefined -Wno-pragma-pack -Wno-ignored-pragma-intrinsic -Wno-ignored-attributes -Wno-unknown-pragmas -Wno-unused-command-line-argument -Wno-unused-function -Wno-deprecated-declarations</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -302,7 +302,7 @@
       <ForcedIncludeFiles>_tfwopen.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <CLToolExe>clang-cl.exe</CLToolExe>
       <CLToolPath>C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin</CLToolPath>
-      <AdditionalOptions>-m64 -O3 -fno-strict-aliasing -march=haswell -mtune=native /Zc:__cplusplus $(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd9002 /Zc:__cplusplus -m64 -O3 -fno-strict-aliasing -march=haswell -mtune=native $(AdditionalOptions) -w -Wno-unknown-warning-option -Wno-macro-redefined -Wno-pragma-pack -Wno-ignored-pragma-intrinsic -Wno-ignored-attributes -Wno-unknown-pragmas -Wno-unused-command-line-argument -Wno-unused-function -Wno-deprecated-declarations</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>

@@ -40,11 +40,13 @@ private:
     ID3D11VertexShader*     pVertexShader;
     ID3D11PixelShader*      pPixelShaderPoint;
     ID3D11PixelShader*      pPixelShaderLinear;
+    ID3D11PixelShader*      pPixelShaderFX = nullptr;  // effects shader
     ID3D11InputLayout*      pInputLayout;
     ID3D11SamplerState*     pSamplerPoint;
     ID3D11SamplerState*     pSamplerLinear;
     ID3D11Buffer*           pVertexBuffer;
     ID3D11Buffer*           pConstantBuffer;
+    ID3D11Buffer*           pFXConstBuffer = nullptr;  // effects parameters
     ID3D11BlendState*       pBlendState;
     ID3D11RasterizerState*  pRasterizerState;
     ID3D11DepthStencilState* pDepthStencilState;

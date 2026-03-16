@@ -92,7 +92,11 @@ static bool CompileD3D11Shader(ID3D11Device* device, const char* hlsl, const cha
     ID3DBlob* errors = nullptr;
     if (FAILED(D3DCompile(hlsl, strlen(hlsl), nullptr, nullptr, nullptr, entry, profile, 0, 0, &blob, &errors)))
     {
-        if (errors) { errors->Release(); }
+        if (errors) {
+            OutputDebugStringA((const char*)errors->GetBufferPointer());
+            fprintf(stderr, "HLSL Error: %s\n", (const char*)errors->GetBufferPointer());
+            errors->Release();
+        }
         return false;
     }
 
@@ -251,10 +255,39 @@ bool CDirect3D11::Initialize(HWND hWnd)
         "struct PS_IN { float4 pos : SV_POSITION; float2 uv0 : TEXCOORD0; float2 uv1 : TEXCOORD1; };\n"
         "PS_IN main(VS_IN i) { PS_IN o; o.pos = mul(proj, float4(i.pos, 1)); o.uv0 = i.uv0; o.uv1 = i.uv1; return o; }\n";
 
+    // Standard pixel shader (passthrough)
     static const char* psHLSL =
         "Texture2D tex : register(t0); SamplerState samp : register(s0);\n"
         "struct PS_IN { float4 pos : SV_POSITION; float2 uv0 : TEXCOORD0; float2 uv1 : TEXCOORD1; };\n"
         "float4 main(PS_IN i) : SV_Target { return tex.Sample(samp, i.uv0); }\n";
+
+    // Enhanced pixel shader with post-processing effects (compiled separately)
+    static const char* psFXHLSL =
+        "Texture2D tex : register(t0);\n"
+        "SamplerState samp : register(s0);\n"
+        "cbuffer FXParams : register(b1) {\n"
+        "  float fxGamma;\n"
+        "  float fxSaturation;\n"
+        "  float fxWarmth;\n"
+        "  float fxScanline;\n"
+        "  float2 fxTexSize;\n"
+        "  float2 fxOutSize;\n"
+        "};\n"
+        "struct PS_IN { float4 pos : SV_POSITION; float2 uv0 : TEXCOORD0; float2 uv1 : TEXCOORD1; };\n"
+        "float4 main(PS_IN i) : SV_Target {\n"
+        "  float3 c = tex.Sample(samp, i.uv0).rgb;\n"
+        "  float invG = lerp(1.0, 1.0 / max(fxGamma, 1.0), step(1.5, fxGamma));\n"
+        "  c = pow(max(c, 0.001), float3(invG, invG, invG));\n"
+        "  float luma = dot(c, float3(0.299, 0.587, 0.114));\n"
+        "  c = lerp(float3(luma, luma, luma), c, 1.0 + fxSaturation);\n"
+        "  c.r *= (1.0 + fxWarmth);\n"
+        "  c.g *= (1.0 + fxWarmth * 0.15);\n"
+        "  c.b *= (1.0 - fxWarmth * 0.5);\n"
+        "  float line = frac(i.uv0.y * max(fxTexSize.y, 1.0));\n"
+        "  float sl = 1.0 - fxScanline * smoothstep(0.3, 0.5, abs(line - 0.5));\n"
+        "  c *= sl;\n"
+        "  return float4(saturate(c), 1.0);\n"
+        "}\n";
 
     if (!CompileD3D11Shader(pDevice, vsHLSL, "main", "vs_4_0", &pVertexShader, nullptr, &pInputLayout))
     {
@@ -272,6 +305,12 @@ bool CDirect3D11::Initialize(HWND hWnd)
     }
     InfoLog("D3D11 Initialize: PS compiled OK pPixelShaderPoint=%p", pPixelShaderPoint);
     pPixelShaderLinear = pPixelShaderPoint;
+
+    // Compile effects shader (non-fatal if fails)
+    if (CompileD3D11Shader(pDevice, psFXHLSL, "main", "ps_4_0", nullptr, &pPixelShaderFX, nullptr))
+        InfoLog("D3D11 Initialize: FX shader compiled OK pPixelShaderFX=%p", pPixelShaderFX);
+    else
+        WarnLog("D3D11 Initialize: FX shader compile failed, effects disabled");
 
     D3D11_SAMPLER_DESC sampDesc = {};
     sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
@@ -299,6 +338,14 @@ bool CDirect3D11::Initialize(HWND hWnd)
     cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     HRESULT hrCB = pDevice->CreateBuffer(&cbDesc, nullptr, &pConstantBuffer);
     if (FAILED(hrCB)) { ErrLog("D3D11 CreateBuffer(CB) FAILED hr=0x%08X", (unsigned)hrCB); return false; }
+
+    // Effects parameters constant buffer (b1)
+    D3D11_BUFFER_DESC fxDesc = {};
+    fxDesc.ByteWidth = 32;  // 8 floats = 32 bytes (padded to 16-byte boundary)
+    fxDesc.Usage = D3D11_USAGE_DYNAMIC;
+    fxDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    fxDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    pDevice->CreateBuffer(&fxDesc, nullptr, &pFXConstBuffer);
     InfoLog("D3D11 Initialize: buffers OK pVB=%p pCB=%p sizeof(VERTEX)=%u", pVertexBuffer, pConstantBuffer, (unsigned)sizeof(VERTEX_D3D11));
 
     D3D11_BLEND_DESC blendDesc = {};
@@ -372,10 +419,12 @@ void CDirect3D11::DeInitialize()
     if (pDepthStencilState) { pDepthStencilState->Release(); pDepthStencilState = nullptr; }
     if (pRasterizerState) { pRasterizerState->Release(); pRasterizerState = nullptr; }
     if (pBlendState) { pBlendState->Release(); pBlendState = nullptr; }
+    if (pFXConstBuffer) { pFXConstBuffer->Release(); pFXConstBuffer = nullptr; }
     if (pConstantBuffer) { pConstantBuffer->Release(); pConstantBuffer = nullptr; }
     if (pVertexBuffer) { pVertexBuffer->Release(); pVertexBuffer = nullptr; }
     if (pSamplerLinear) { pSamplerLinear->Release(); pSamplerLinear = nullptr; }
     if (pSamplerPoint) { pSamplerPoint->Release(); pSamplerPoint = nullptr; }
+    if (pPixelShaderFX) { pPixelShaderFX->Release(); pPixelShaderFX = nullptr; }
     if (pPixelShaderLinear && pPixelShaderLinear != pPixelShaderPoint) pPixelShaderLinear->Release();
     if (pPixelShaderPoint) { pPixelShaderPoint->Release(); pPixelShaderPoint = nullptr; }
     pPixelShaderLinear = nullptr;
@@ -731,9 +780,9 @@ void CDirect3D11::RenderFrame()
     Dst.Pitch = tempPitch;
     RenderMethod(stagingSrc, Dst, &dstRect);
 
-    if (gpuConvertEnabled && pRGB565Texture)
+    if (false && gpuConvertEnabled && pRGB565Texture)
     {
-        // === GPU PATH: upload 16-bit pixels directly, pixel shader converts ===
+        // === GPU PATH: disabled — FX shader needs BGRA texture from CPU path ===
         HRESULT hrMap = pContext->Map(pRGB565Texture, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
         if (SUCCEEDED(hrMap))
         {
@@ -819,17 +868,17 @@ void CDirect3D11::RenderFrame()
     pContext->VSSetShader(pVertexShader, nullptr, 0);
     pContext->VSSetConstantBuffers(0, 1, &pConstantBuffer);
 
-    if (gpuConvertEnabled && pPixelShaderConvert)
     {
-        // GPU path: R16_UINT texture + conversion pixel shader
-        pContext->PSSetShader(pPixelShaderConvert, nullptr, 0);
-        pContext->PSSetShaderResources(0, 1, &pRGB565SRV);
-    }
-    else
-    {
-        // CPU path: pre-converted BGRA texture + standard shader
-        ID3D11PixelShader* ps = Settings.BilinearFilter ? pPixelShaderLinear : pPixelShaderPoint;
+        // Select pixel shader: FX shader when effects active, standard otherwise
+        bool anyEffect = GUI.EffectGamma || GUI.EffectSaturation || GUI.EffectWarmth || GUI.EffectCRT;
+        ID3D11PixelShader* ps;
+        if (anyEffect && pPixelShaderFX)
+            ps = pPixelShaderFX;
+        else
+            ps = Settings.BilinearFilter ? pPixelShaderLinear : pPixelShaderPoint;
         pContext->PSSetShader(ps, nullptr, 0);
+
+        // Always use CPU-converted BGRA texture (FX shader needs float Sample, not R16_UINT)
         pContext->PSSetShaderResources(0, 1, &pDrawTextureSRV);
     }
     ID3D11SamplerState* samp = Settings.BilinearFilter ? pSamplerLinear : pSamplerPoint;
@@ -837,6 +886,27 @@ void CDirect3D11::RenderFrame()
     pContext->OMSetBlendState(pBlendState, nullptr, 0xffffffff);
     pContext->OMSetDepthStencilState(pDepthStencilState, 0);
     pContext->RSSetState(pRasterizerState);
+
+    // Update effects parameters constant buffer (b1)
+    if (pFXConstBuffer)
+    {
+        struct { float gamma, saturation, warmth, scanline; float texW, texH, outW, outH; } fxp;
+        fxp.gamma      = GUI.EffectGamma      ? 2.2f : 0.0f;
+        fxp.saturation = GUI.EffectSaturation  ? 0.4f : 0.0f;
+        fxp.warmth     = GUI.EffectWarmth      ? 0.25f : 0.0f;
+        fxp.scanline   = GUI.EffectCRT         ? 0.35f : 0.0f;
+        fxp.texW = (float)afterRenderWidth;
+        fxp.texH = (float)afterRenderHeight;
+        fxp.outW = (float)backBufferWidth;
+        fxp.outH = (float)backBufferHeight;
+        D3D11_MAPPED_SUBRESOURCE m;
+        if (SUCCEEDED(pContext->Map(pFXConstBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &m)))
+        {
+            memcpy(m.pData, &fxp, sizeof(fxp));
+            pContext->Unmap(pFXConstBuffer, 0);
+        }
+        pContext->PSSetConstantBuffers(1, 1, &pFXConstBuffer);
+    }
 
     pContext->Draw(4, 0);
 

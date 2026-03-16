@@ -1077,6 +1077,13 @@ BEGIN
         MENUITEM "&Search for New Cheats",      ID_CHEAT_SEARCH,MFT_STRING,MFS_ENABLED
         MENUITEM "&Apply Cheats",               ID_CHEAT_APPLY,MFT_STRING,MFS_CHECKED
     END
+    POPUP "E&ffects",                       0,MFT_STRING,MFS_ENABLED
+    BEGIN
+        MENUITEM "&Gamma Correction (sRGB)",   ID_EFFECTS_GAMMA,MFT_STRING,MFS_ENABLED
+        MENUITEM "&Saturation Boost",          ID_EFFECTS_SATURATION,MFT_STRING,MFS_ENABLED
+        MENUITEM "&Warm Colors",               ID_EFFECTS_WARMTH,MFT_STRING,MFS_ENABLED
+        MENUITEM "&CRT Scanlines",             ID_EFFECTS_CRT,MFT_STRING,MFS_ENABLED
+    END
     POPUP "&Debug",                         0,MFT_STRING,MFS_ENABLED
     BEGIN
         MENUITEM "Show Debug &Info...",         ID_DEBUG_SHOWINFO,MFT_STRING,MFS_ENABLED

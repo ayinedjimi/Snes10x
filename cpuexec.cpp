@@ -26,7 +26,9 @@ static inline void S9xReschedule (void);
 
 // flatten: inline opcode handlers into dispatch loop
 // hot: prioritize code placement for instruction cache
+#if defined(__clang__) || defined(__GNUC__)
 __attribute__((flatten, hot))
+#endif
 void S9xMainLoop (void)
 {
 	#define CHECK_FOR_IRQ_CHANGE() \

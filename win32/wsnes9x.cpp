@@ -719,6 +719,16 @@ void S9xRestoreWindowTitle ()
     else
         _stprintf(buf, TEXT("%s %s"), WINDOW_TITLE, TEXT(VERSION));
 
+    // Append active effects to title bar (Snes10x)
+    if (GUI.EffectGamma || GUI.EffectSaturation || GUI.EffectWarmth || GUI.EffectCRT)
+    {
+        TCHAR *p = buf + _tcslen(buf);
+        if (GUI.EffectGamma)   { _tcscpy(p, TEXT(" [Gamma]"));       p += _tcslen(p); }
+        if (GUI.EffectSaturation) { _tcscpy(p, TEXT(" [Saturation]")); p += _tcslen(p); }
+        if (GUI.EffectWarmth)   { _tcscpy(p, TEXT(" [Warmth]"));     p += _tcslen(p); }
+        if (GUI.EffectCRT)     { _tcscpy(p, TEXT(" [CRT]"));        p += _tcslen(p); }
+    }
+
     SetWindowText (GUI.hWnd, buf);
 }
 
@@ -2237,18 +2247,30 @@ LRESULT CALLBACK WinProc(
 		case ID_EFFECTS_GAMMA:
 			GUI.EffectGamma ^= true;
 			CheckMenuStates();
+			DrawMenuBar(GUI.hWnd);
+			S9xRestoreWindowTitle();
+			WinRefreshDisplay();
 			break;
 		case ID_EFFECTS_SATURATION:
 			GUI.EffectSaturation ^= true;
 			CheckMenuStates();
+			DrawMenuBar(GUI.hWnd);
+			S9xRestoreWindowTitle();
+			WinRefreshDisplay();
 			break;
 		case ID_EFFECTS_WARMTH:
 			GUI.EffectWarmth ^= true;
 			CheckMenuStates();
+			DrawMenuBar(GUI.hWnd);
+			S9xRestoreWindowTitle();
+			WinRefreshDisplay();
 			break;
 		case ID_EFFECTS_CRT:
 			GUI.EffectCRT ^= true;
 			CheckMenuStates();
+			DrawMenuBar(GUI.hWnd);
+			S9xRestoreWindowTitle();
+			WinRefreshDisplay();
 			break;
 
 		case ID_HELP_ABOUT:
@@ -3878,18 +3900,19 @@ static void CheckMenuStates ()
 	mii.fState = Settings.DisplayFrameRate ? MFS_CHECKED : MFS_UNCHECKED;
     SetMenuItemInfo (GUI.hMenu, ID_VIDEO_SHOWFRAMERATE, FALSE, &mii);
 
-	// Snes10x Effects checkmarks (must use submenu handle: File=0, Emulation=1, Input=2, Sound=3, Video=4, Cheat=5, Effects=6, Debug=7, Help=8)
+	// Snes10x Effects checkmarks (submenu index: File=0, Emulation=1, Input=2, Sound=3, Video=4, Cheat=5, Effects=6, Debug=7, Help=8)
 	HMENU hEffectsMenu = GetSubMenu(GUI.hMenu, 6);
 	if (hEffectsMenu)
 	{
+		// Use position (TRUE) for submenu items so checkmarks update reliably
 		mii.fState = GUI.EffectGamma ? MFS_CHECKED : MFS_UNCHECKED;
-		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_GAMMA, FALSE, &mii);
+		SetMenuItemInfo(hEffectsMenu, 0, TRUE, &mii);  // Gamma
 		mii.fState = GUI.EffectSaturation ? MFS_CHECKED : MFS_UNCHECKED;
-		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_SATURATION, FALSE, &mii);
+		SetMenuItemInfo(hEffectsMenu, 1, TRUE, &mii);  // Saturation
 		mii.fState = GUI.EffectWarmth ? MFS_CHECKED : MFS_UNCHECKED;
-		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_WARMTH, FALSE, &mii);
+		SetMenuItemInfo(hEffectsMenu, 2, TRUE, &mii);  // Warmth
 		mii.fState = GUI.EffectCRT ? MFS_CHECKED : MFS_UNCHECKED;
-		SetMenuItemInfo (hEffectsMenu, ID_EFFECTS_CRT, FALSE, &mii);
+		SetMenuItemInfo(hEffectsMenu, 3, TRUE, &mii);  // CRT
 	}
 
 	mii.fState = (Settings.Paused && !Settings.StopEmulation) ? MFS_CHECKED : MFS_UNCHECKED;

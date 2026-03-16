@@ -185,6 +185,12 @@ struct sGUI {
 	bool OGLdisablePBOs;
 	int OSDSize;
 
+	// Snes10x Effects
+	bool EffectGamma;       // sRGB gamma correction
+	bool EffectSaturation;  // Color saturation boost
+	bool EffectWarmth;      // Warm color temperature
+	bool EffectCRT;         // CRT scanlines
+
     bool IgnoreNextMouseMove;
     RECT window_size;
 	bool window_maximized;

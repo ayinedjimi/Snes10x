@@ -558,12 +558,18 @@
 #define IDM_MACSRIFLE_TOGGLE            44332
 #define IDC_STATIC                      -1
 
+// Snes10x Effects menu
+#define ID_EFFECTS_GAMMA                40200
+#define ID_EFFECTS_SATURATION           40201
+#define ID_EFFECTS_WARMTH               40202
+#define ID_EFFECTS_CRT                  40203
+
 // Next default values for new objects
-// 
+//
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        169
-#define _APS_NEXT_COMMAND_VALUE         40189
+#define _APS_NEXT_COMMAND_VALUE         40210
 #define _APS_NEXT_CONTROL_VALUE         3044
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
