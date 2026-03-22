@@ -77,7 +77,7 @@ struct SOBJ
 	uint8	Size;
 };
 
-struct SPPU
+struct alignas(64) SPPU
 {
 	struct
 	{

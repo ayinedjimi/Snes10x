@@ -349,3 +349,4 @@ extern struct SSNESGameFixes	SNESGameFixes;
 extern char						String[513];
 
 #endif
+```

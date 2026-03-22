@@ -49,7 +49,7 @@ inline uint8 S9xGetByte (uint32 Address)
 	int32	speed = memory_speed(Address);
 	uint8	byte;
 
-	if (GetAddress >= (uint8 *) CMemory::MAP_LAST)
+	if (S9X_LIKELY(GetAddress >= (uint8 *) CMemory::MAP_LAST))
 	{
 		byte = *(GetAddress + (Address & 0xffff));
 		addCyclesInMemoryAccess;
@@ -178,7 +178,7 @@ inline uint16 S9xGetWord (uint32 Address, enum s9xwrap_t w = WRAP_NONE)
 	uint8	*GetAddress = Memory.Map[block];
 	int32	speed = memory_speed(Address);
 
-	if (GetAddress >= (uint8 *) CMemory::MAP_LAST)
+	if (S9X_LIKELY(GetAddress >= (uint8 *) CMemory::MAP_LAST))
 	{
 		word = READ_WORD(GetAddress + (Address & 0xffff));
 		addCyclesInMemoryAccess_x2;
@@ -311,7 +311,7 @@ inline void S9xSetByte (uint8 Byte, uint32 Address)
 	uint8	*SetAddress = Memory.WriteMap[block];
 	int32	speed = memory_speed(Address);
 
-	if (SetAddress >= (uint8 *) CMemory::MAP_LAST)
+	if (S9X_LIKELY(SetAddress >= (uint8 *) CMemory::MAP_LAST))
 	{
 		*(SetAddress + (Address & 0xffff)) = Byte;
 		addCyclesInMemoryAccess;
@@ -451,7 +451,7 @@ inline void S9xSetWord (uint16 Word, uint32 Address, enum s9xwrap_t w = WRAP_NON
 	uint8	*SetAddress = Memory.WriteMap[block];
 	int32	speed = memory_speed(Address);
 
-	if (SetAddress >= (uint8 *) CMemory::MAP_LAST)
+	if (S9X_LIKELY(SetAddress >= (uint8 *) CMemory::MAP_LAST))
 	{
 		WRITE_WORD(SetAddress + (Address & 0xffff), Word);
 		addCyclesInMemoryAccess_x2;
@@ -692,7 +692,7 @@ inline void S9xSetPCBase (uint32 Address)
 	CPU.MemSpeed = memory_speed(Address);
 	CPU.MemSpeedx2 = CPU.MemSpeed << 1;
 
-	if (GetAddress >= (uint8 *) CMemory::MAP_LAST)
+	if (S9X_LIKELY(GetAddress >= (uint8 *) CMemory::MAP_LAST))
 	{
 		CPU.PCBase = GetAddress;
 		return;
@@ -756,7 +756,7 @@ inline uint8 * S9xGetBasePointer (uint32 Address)
 {
 	uint8	*GetAddress = Memory.Map[(Address & 0xffffff) >> MEMMAP_SHIFT];
 
-	if (GetAddress >= (uint8 *) CMemory::MAP_LAST)
+	if (S9X_LIKELY(GetAddress >= (uint8 *) CMemory::MAP_LAST))
 		return (GetAddress);
 
 	switch ((pint) GetAddress)

@@ -7,15 +7,18 @@
 #include <cmath>
 #include <vector>
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 #include <atomic>
 #include "../snes9x.h"
 #include "apu.h"
+#include "resampler.h"
+#include "pixform.h"
+
+#if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
+#include <immintrin.h>
+#endif
 #include "../msu1.h"
 #include "../snapshot.h"
 #include "../display.h"
-#include "resampler.h"
 
 #include "bapu/snes/snes.hpp"
 
@@ -78,9 +81,7 @@ struct WorkItem {
 };
 
 static std::thread            thread;
-static std::mutex             mtx;
-static std::condition_variable cv_work;   // signal APU: "work available"
-static std::condition_variable cv_done;   // signal CPU: "work complete"
+static std::atomic_flag       spin_lock = ATOMIC_FLAG_INIT;
 static std::atomic<bool>      running{false};
 static bool                   has_work = false;
 static bool                   work_done = true;
@@ -90,13 +91,39 @@ static void ThreadFunc()
 {
     while (running.load(std::memory_order_relaxed))
     {
-        // Wait for work
+        // Wait for work (Spinlock)
+        while (running.load(std::memory_order_relaxed))
         {
-            std::unique_lock<std::mutex> lock(mtx);
-            cv_work.wait(lock, [] { return has_work || !running.load(std::memory_order_relaxed); });
-            if (!running.load(std::memory_order_relaxed))
+            while (spin_lock.test_and_set(std::memory_order_acquire)) {
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+#if defined(_MSC_VER)
+                _mm_pause();
+#else
+                __builtin_ia32_pause();
+#endif
+#else
+                std::this_thread::yield();
+#endif
+            }
+            if (has_work || !running.load(std::memory_order_relaxed)) {
+                spin_lock.clear(std::memory_order_release);
                 break;
+            }
+            spin_lock.clear(std::memory_order_release);
+            
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+#if defined(_MSC_VER)
+            _mm_pause();
+#else
+            __builtin_ia32_pause();
+#endif
+#else
+            std::this_thread::yield();
+#endif
         }
+        
+        if (!running.load(std::memory_order_relaxed))
+            break;
 
         // Execute APU work (no lock held — SMP/DSP state is exclusively ours)
         SNES::smp.clock -= work.cycles;
@@ -109,12 +136,10 @@ static void ThreadFunc()
             S9xLandSamples();
 
         // Signal completion
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-            has_work = false;
-            work_done = true;
-        }
-        cv_done.notify_one();
+        while (spin_lock.test_and_set(std::memory_order_acquire)) {}
+        has_work = false;
+        work_done = true;
+        spin_lock.clear(std::memory_order_release);
     }
 }
 
@@ -133,11 +158,12 @@ static void Stop()
     if (!running.load())
         return;
     {
-        std::lock_guard<std::mutex> lock(mtx);
+        while (spin_lock.test_and_set(std::memory_order_acquire)) {}
         running.store(false);
         has_work = false;
+        work_done = true;
+        spin_lock.clear(std::memory_order_release);
     }
-    cv_work.notify_one();
     if (thread.joinable())
         thread.join();
 }
@@ -145,20 +171,46 @@ static void Stop()
 // Wait for any pending APU work to complete
 static void WaitDone()
 {
-    std::unique_lock<std::mutex> lock(mtx);
-    cv_done.wait(lock, [] { return work_done; });
+    while (running.load(std::memory_order_relaxed))
+    {
+        while (spin_lock.test_and_set(std::memory_order_acquire)) {
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+#if defined(_MSC_VER)
+            _mm_pause();
+#else
+            __builtin_ia32_pause();
+#endif
+#else
+            std::this_thread::yield();
+#endif
+        }
+        if (work_done) {
+            spin_lock.clear(std::memory_order_release);
+            break;
+        }
+        spin_lock.clear(std::memory_order_release);
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+#if defined(_MSC_VER)
+        _mm_pause();
+#else
+        __builtin_ia32_pause();
+#endif
+#else
+        std::this_thread::yield();
+#endif
+    }
 }
 
 // Post work to APU thread (caller must have already called WaitDone)
 static void PostWork(int cycles, bool dsp_sync, bool land_samples)
 {
-    std::lock_guard<std::mutex> lock(mtx);
+    while (spin_lock.test_and_set(std::memory_order_acquire)) {}
     work.cycles = cycles;
     work.do_dsp_sync = dsp_sync;
     work.do_land_samples = land_samples;
     work_done = false;
     has_work = true;
-    cv_work.notify_one();
+    spin_lock.clear(std::memory_order_release);
 }
 
 } // namespace apu_thread
@@ -194,10 +246,28 @@ bool8 S9xMixSamples(uint8 *dest, int sample_count)
             msu::resampler_buffer.resize(sample_count);
 
         msu::resampler.read(msu::resampler_buffer.data(), sample_count);
-        for (int i = 0; i < sample_count; ++i)
+        int i = 0;
+#if defined(__AVX2__)
+        for (; i <= sample_count - 16; i += 16)
+        {
+            __m256i a = _mm256_loadu_si256((const __m256i*)&out[i]);
+            __m256i b = _mm256_loadu_si256((const __m256i*)&msu::resampler_buffer[i]);
+            __m256i res = _mm256_adds_epi16(a, b);
+            _mm256_storeu_si256((__m256i*)&out[i], res);
+        }
+#elif defined(__SSE2__) || defined(_M_X64)
+        for (; i <= sample_count - 8; i += 8)
+        {
+            __m128i a = _mm_loadu_si128((const __m128i*)&out[i]);
+            __m128i b = _mm_loadu_si128((const __m128i*)&msu::resampler_buffer[i]);
+            __m128i res = _mm_adds_epi16(a, b);
+            _mm_storeu_si128((__m128i*)&out[i], res);
+        }
+#endif
+        for (; i < sample_count; ++i)
         {
             int32 mixed = (int32)out[i] + msu::resampler_buffer[i];
-            out[i] = ((int16)mixed != mixed) ? (mixed >> 31) ^ 0x7fff : mixed;
+            out[i] = ((int16)mixed != mixed) ? ((mixed >> 31) ^ 0x7fff) : mixed;
         }
     }
 
